@@ -7,226 +7,179 @@ import pysubstringsearch
 class PySubstringSearchTestCase(
     unittest.TestCase,
 ):
-    def test_sanity(
+    def assert_substring_search(
         self,
+        strings,
+        substring,
+        expected_results,
     ):
         with tempfile.TemporaryDirectory() as tmp_directory:
-            domains = [
-                'one',
-                'two',
-                'three',
-                'four',
-                'five',
-                'six',
-                'seven',
-                'eight',
-                'nine',
-                'ten',
-            ]
-
-            index_file_path = f'{tmp_directory}/output.idx'
             writer = pysubstringsearch.Writer(
-                index_file_path=index_file_path,
+                index_file_path=f'{tmp_directory}/output.idx',
             )
-            for domain in domains:
+            for string in strings:
                 writer.add_entry(
-                    text=domain,
+                    text=string,
                 )
             writer.finalize()
 
             reader = pysubstringsearch.Reader(
-                index_file_path=index_file_path,
-            )
-
-            results = reader.search(
-                substring='four',
+                index_file_path=f'{tmp_directory}/output.idx',
             )
             self.assertCountEqual(
-                first=results,
-                second=[
-                    'four',
-                ],
-            )
-
-            results = reader.search(
-                substring='f',
+                first=reader.search_parallel(
+                    substring=substring,
+                ),
+                second=expected_results,
             )
             self.assertCountEqual(
-                first=results,
-                second=[
-                    'four',
-                    'five',
-                ],
+                first=reader.search_sequential(
+                    substring=substring,
+                ),
+                second=expected_results,
             )
 
-            results = reader.search(
-                substring='our',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[
-                    'four',
-                ],
-            )
+    def test_sanity(
+        self,
+    ):
+        strings = [
+            'one',
+            'two',
+            'three',
+            'four',
+            'five',
+            'six',
+            'seven',
+            'eight',
+            'nine',
+            'ten',
+        ]
 
-            results = reader.search(
-                substring='aaa',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[],
-            )
+        self.assert_substring_search(
+            strings=strings,
+            substring='four',
+            expected_results=[
+                'four',
+            ],
+        )
+
+        self.assert_substring_search(
+            strings=strings,
+            substring='f',
+            expected_results=[
+                'four',
+                'five',
+            ],
+        )
+
+        self.assert_substring_search(
+            strings=strings,
+            substring='our',
+            expected_results=[
+                'four',
+            ],
+        )
+
+        self.assert_substring_search(
+            strings=strings,
+            substring='aaa',
+            expected_results=[],
+        )
 
     def test_edgecases(
         self,
     ):
-        with tempfile.TemporaryDirectory() as tmp_directory:
-            domains = [
+        strings = [
+            'one',
+            'two',
+            'three',
+            'four',
+            'five',
+            'six',
+            'seven',
+            'eight',
+            'nine',
+            'ten',
+            'tenten',
+        ]
+
+        self.assert_substring_search(
+            strings=strings,
+            substring='none',
+            expected_results=[],
+        )
+
+        self.assert_substring_search(
+            strings=strings,
+            substring='one',
+            expected_results=[
                 'one',
-                'two',
-                'three',
-                'four',
-                'five',
-                'six',
-                'seven',
-                'eight',
-                'nine',
-                'ten',
-                'tenten',
-            ]
+            ],
+        )
 
-            index_file_path = f'{tmp_directory}/output.idx'
-            writer = pysubstringsearch.Writer(
-                index_file_path=index_file_path,
-            )
-            for domain in domains:
-                writer.add_entry(
-                    text=domain,
-                )
-            writer.finalize()
+        self.assert_substring_search(
+            strings=strings,
+            substring='onet',
+            expected_results=[],
+        )
 
-            reader = pysubstringsearch.Reader(
-                index_file_path=index_file_path,
-            )
-
-            results = reader.search(
-                substring='none',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[],
-            )
-
-            results = reader.search(
-                substring='one',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[
-                    'one',
-                ],
-            )
-
-            results = reader.search(
-                substring='onet',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[],
-            )
-
-            results = reader.search(
-                substring='ten',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[
+        self.assert_substring_search(
+            strings=strings,
+            substring='ten',
+            expected_results=[
                     'ten',
                     'tenten',
                 ],
-            )
+        )
 
     def test_unicode(
         self,
     ):
-        with tempfile.TemporaryDirectory() as tmp_directory:
-            domains = [
+        strings = [
+            '诶比西',
+        ]
+
+        self.assert_substring_search(
+            strings=strings,
+            substring='诶',
+            expected_results=[
                 '诶比西',
-            ]
+            ],
+        )
 
-            index_file_path = f'{tmp_directory}/output.idx'
-            writer = pysubstringsearch.Writer(
-                index_file_path=index_file_path,
-            )
-            for domain in domains:
-                writer.add_entry(
-                    text=domain,
-                )
-            writer.finalize()
+        self.assert_substring_search(
+            strings=strings,
+            substring='诶比',
+            expected_results=[
+                '诶比西',
+            ],
+        )
 
-            reader = pysubstringsearch.Reader(
-                index_file_path=index_file_path,
-            )
+        self.assert_substring_search(
+            strings=strings,
+            substring='比诶',
+            expected_results=[],
+        )
 
-            results = reader.search(
-                substring='诶',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[
-                    '诶比西',
-                ],
-            )
-
-            results = reader.search(
-                substring='诶比',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[
-                    '诶比西',
-                ],
-            )
-
-            results = reader.search(
-                substring='比诶',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[],
-            )
-
-            results = reader.search(
-                substring='none',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[],
-            )
+        self.assert_substring_search(
+            strings=strings,
+            substring='none',
+            expected_results=[],
+        )
 
     def test_multiple_words_string(
         self,
     ):
-        with tempfile.TemporaryDirectory() as tmp_directory:
-            index_file_path = f'{tmp_directory}/output.idx'
-            writer = pysubstringsearch.Writer(
-                index_file_path=index_file_path,
-            )
-            writer.add_entry('some short string')
-            writer.add_entry('another but now a longer string')
-            writer.add_entry('more text to add')
-            writer.finalize()
+        strings = [
+            'some short string',
+            'another but now a longer string',
+            'more text to add',
+        ]
 
-            reader = pysubstringsearch.Reader(
-                index_file_path=index_file_path,
-            )
-
-            results = reader.search(
-                substring='short',
-            )
-            self.assertCountEqual(
-                first=results,
-                second=[
-                    'some short string',
-                ],
-            )
+        self.assert_substring_search(
+            strings=strings,
+            substring='short',
+            expected_results=[
+                'some short string',
+            ],
+        )
