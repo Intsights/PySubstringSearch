@@ -39,6 +39,16 @@ class PySubstringSearchTestCase(
                 second=expected_results,
             )
 
+    def test_file_not_found(
+        self,
+    ):
+        with self.assertRaises(
+            expected_exception=RuntimeError,
+        ):
+            pysubstringsearch.Reader(
+                index_file_path=f'missing_index_file_path',
+            )
+
     def test_sanity(
         self,
     ):

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <thread>
 #include <future>
+#include <filesystem>
 
 #include "msufsort.hpp"
 
@@ -145,6 +146,10 @@ class Reader {
         Reader(
             std::string index_file_path
         ) {
+            if (std::filesystem::exists(index_file_path) == false) {
+                throw std::runtime_error("Could not find index file path : " + index_file_path);
+            }
+
             std::ifstream input_file_stream(
                 index_file_path,
                 std::ios_base::in | std::ios_base::binary | std::ios_base::ate
