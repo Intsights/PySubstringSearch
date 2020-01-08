@@ -149,6 +149,10 @@ class Reader {
                 index_file_path,
                 std::ios_base::in | std::ios_base::binary | std::ios_base::ate
             );
+            if (!input_file_stream.good()) {
+                throw std::runtime_error("Could not find index file path : " + index_file_path);
+            }
+
             std::streamoff file_size = input_file_stream.tellg();
             input_file_stream.seekg(0, std::ios_base::beg);
 
