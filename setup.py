@@ -6,7 +6,7 @@ import glob
 
 setuptools.setup(
     name='PySubstringSearch',
-    version='0.2.1',
+    version='0.2.2',
     author='Gal Ben David',
     author_email='wavenator@gmail.com',
     url='https://github.com/wavenator/PySubstringSearch',
