@@ -1,6 +1,6 @@
 <p align="center">
-    <a href="https://github.com/wavenator/PySubstringSearch">
-        <img src="https://raw.githubusercontent.com/wavenator/PySubstringSearch/master/images/logo.png" alt="Logo">
+    <a href="https://github.com/Intsights/PySubstringSearch">
+        <img src="https://raw.githubusercontent.com/Intsights/PySubstringSearch/master/images/logo.png" alt="Logo">
     </a>
     <h3 align="center">
         Python library for fast substring/pattern search written in C++ leveraging Suffix Array Algorithm
@@ -9,7 +9,7 @@
 
 ![license](https://img.shields.io/badge/MIT-License-blue)
 ![Python](https://img.shields.io/badge/Python-3.6%20%7C%203.7%20%7C%203.8%20%7C%20pypy3-blue)
-![Build](https://github.com/wavenator/PySubstringSearch/workflows/Build/badge.svg)
+![Build](https://github.com/Intsights/PySubstringSearch/workflows/Build/badge.svg)
 [![PyPi](https://img.shields.io/pypi/v/PySubstringSearch.svg)](https://pypi.org/project/PySubstringSearch/)
 
 ## Table of Contents
@@ -42,17 +42,17 @@ The module implements two methods, search_sequential & search_parallel. search_s
 | Library  | Text Size | Function | Time | #Results | Improvement Factor |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | 500mb | Ripgrepy('text_one', '500mb').run().as_string.split('\n') | 127 ms ± 694 µs per loop | 12553 | 1.0x |
-| [PySubstringSearch](https://github.com/wavenator/PySubstringSearch) | 500mb | reader.search_sequential('text_one') | 2.48 ms ± 53.4 µs per loop | 12553 | 51.2x |
-| [PySubstringSearch](https://github.com/wavenator/PySubstringSearch) | 500mb | reader.search_parallel('text_one') | 3.78 ms ± 350 µs per loop | 12553 | 33.6x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 500mb | reader.search_sequential('text_one') | 2.48 ms ± 53.4 µs per loop | 12553 | 51.2x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 500mb | reader.search_parallel('text_one') | 3.78 ms ± 350 µs per loop | 12553 | 33.6x |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | 500mb | Ripgrepy('text_two', '500mb').run().as_string.split('\n') | 127 ms ± 623 µs per loop | 769 | 1.0x |
-| [PySubstringSearch](https://github.com/wavenator/PySubstringSearch) | 500mb | reader.search_sequential('text_two') | 156 µs ± 916 ns per loop | 769 | 814.0x |
-| [PySubstringSearch](https://github.com/wavenator/PySubstringSearch) | 500mb | reader.search_parallel('text_two') | 251 µs ± 80.2 µs per loop | 769 | 506.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 500mb | reader.search_sequential('text_two') | 156 µs ± 916 ns per loop | 769 | 814.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 500mb | reader.search_parallel('text_two') | 251 µs ± 80.2 µs per loop | 769 | 506.0x |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | 6gb | Ripgrepy('text_one', '6gb').run().as_string.split('\n') | 1.38 s ± 3.82 ms | 206884 | 1.0x |
-| [PySubstringSearch](https://github.com/wavenator/PySubstringSearch) | 6gb | reader.search_sequential('text_one') | 93.7 ms ± 2.16 ms per loop | 206884 | 15.3x |
-| [PySubstringSearch](https://github.com/wavenator/PySubstringSearch) | 6gb | reader.search_parallel('text_one') | 34.3 ms ± 321 µs per loop | 206884 | 40.5x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 6gb | reader.search_sequential('text_one') | 93.7 ms ± 2.16 ms per loop | 206884 | 15.3x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 6gb | reader.search_parallel('text_one') | 34.3 ms ± 321 µs per loop | 206884 | 40.5x |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | 6gb | Ripgrepy('text_two', '6gb').run().as_string.split('\n') | 1.61 s ± 37.2 ms per loop | 6921 | 1.0x |
-| [PySubstringSearch](https://github.com/wavenator/PySubstringSearch) | 6gb | reader.search_sequential('text_two') | 2.22 ms ± 79.3 µs per loop | 6921 | 725.2x |
-| [PySubstringSearch](https://github.com/wavenator/PySubstringSearch) | 6gb | reader.search_parallel('text_two') | 1.38 ms ± 26 µs per loop | 6921 | 1166.6x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 6gb | reader.search_sequential('text_two') | 2.22 ms ± 79.3 µs per loop | 6921 | 725.2x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 6gb | reader.search_parallel('text_two') | 1.38 ms ± 26 µs per loop | 6921 | 1166.6x |
 
 ### Prerequisites
 
@@ -130,6 +130,6 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
-Gal Ben David - wavenator@gmail.com
+Gal Ben David - gal@intsights.com
 
-Project Link: [https://github.com/wavenator/PySubstringSearch](https://github.com/wavenator/PySubstringSearch)
+Project Link: [https://github.com/Intsights/PySubstringSearch](https://github.com/Intsights/PySubstringSearch)

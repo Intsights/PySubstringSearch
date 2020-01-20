@@ -8,10 +8,10 @@ setuptools.setup(
     name='PySubstringSearch',
     version='0.2.2',
     author='Gal Ben David',
-    author_email='wavenator@gmail.com',
-    url='https://github.com/wavenator/PySubstringSearch',
+    author_email='gal@intsights.com',
+    url='https://github.com/Intsights/PySubstringSearch',
     project_urls={
-        'Source': 'https://github.com/wavenator/PySubstringSearch',
+        'Source': 'https://github.com/Intsights/PySubstringSearch',
     },
     license='MIT',
     description='Python library for fast substring/pattern search written in C++ leveraging Suffix Array Algorithm',
