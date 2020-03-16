@@ -5,7 +5,7 @@ import glob
 
 setuptools.setup(
     name='PySubstringSearch',
-    version='0.2.5',
+    version='0.3.0',
     author='Gal Ben David',
     author_email='gal@intsights.com',
     url='https://github.com/Intsights/PySubstringSearch',
