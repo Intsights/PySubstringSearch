@@ -5,7 +5,7 @@ import glob
 
 setuptools.setup(
     name='PySubstringSearch',
-    version='0.3.0',
+    version='0.3.1',
     author='Gal Ben David',
     author_email='gal@intsights.com',
     url='https://github.com/Intsights/PySubstringSearch',
@@ -21,6 +21,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     keywords='substring pattern search suffix array c++',
     python_requires='>=3.6',
@@ -38,15 +39,11 @@ setuptools.setup(
             ),
             language='c++',
             extra_compile_args=[
-                '-Ofast',
                 '-std=c++17',
-            ],
-            extra_link_args=[
-                '-lpthread',
             ],
             include_dirs=[
                 'src',
-            ]
+            ],
         ),
     ],
 )
