@@ -8,7 +8,7 @@
 </p>
 
 ![license](https://img.shields.io/badge/MIT-License-blue)
-![Python](https://img.shields.io/badge/Python-3.6%20%7C%203.7%20%7C%203.8%20%7C%20pypy3-blue)
+![Python](https://img.shields.io/badge/Python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9%20%7C%20pypy3-blue)
 ![Build](https://github.com/Intsights/PySubstringSearch/workflows/Build/badge.svg)
 [![PyPi](https://img.shields.io/pypi/v/PySubstringSearch.svg)](https://pypi.org/project/PySubstringSearch/)
 
