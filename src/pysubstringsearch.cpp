@@ -213,12 +213,6 @@ class Reader {
                 future.wait();
             }
 
-            std::sort(entries.begin(), entries.end());
-            entries.erase(
-                std::unique(entries.begin(), entries.end()),
-                entries.end()
-            );
-
             return entries;
         }
 
@@ -303,6 +297,7 @@ class Reader {
             suffix_array_file_stream->seekg(first_text_index);
             auto number_of_text_indices = ((last_text_index - first_text_index) / 4) + 1;
             std::vector<std::int32_t> text_indices(number_of_text_indices);
+            std::unordered_set<std::int32_t> entries_indices(number_of_text_indices);
             suffix_array_file_stream->read(
                 (char *)text_indices.data(),
                 sizeof(std::int32_t) * number_of_text_indices
@@ -314,9 +309,12 @@ class Reader {
                         break;
                     }
                 }
-                this->entries_lock.lock();
-                entries.push_back(std::string(&text_vector[entry_start]));
-                this->entries_lock.unlock();
+                const auto & [iterator, inserted] = entries_indices.emplace(entry_start);
+                if (inserted == true) {
+                    this->entries_lock.lock();
+                    entries.push_back(std::string(&text_vector[entry_start]));
+                    this->entries_lock.unlock();
+                }
             }
         }
 
@@ -334,7 +332,7 @@ PYBIND11_MODULE(pysubstringsearch, m) {
         .def(
             "search",
             &Reader::search,
-            "search over an index file for a substring",
+            "search over an index file for a substring, returns list of distinct entries",
             pybind11::arg("substring")
         );
     pybind11::class_<Writer>(m, "Writer")

@@ -18,6 +18,8 @@
 - [About The Project](#about-the-project)
   - [Built With](#built-with)
   - [Performance](#performance)
+    - [500MB File](#500mb-file)
+    - [6000MB File](#6000mb-file)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
@@ -29,7 +31,10 @@
 
 PySubstringSearch is a library intended for searching over an index file for substring patterns. The library is written in C++ to achieve speed and efficiency. The library also uses [Msufsort](https://github.com/michaelmaniscalco/msufsort) suffix array construction library for string indexing. The created index consists of the original text and a 32bit suffix array structs. The library relies on a proprietary container protocol to hold the original text along with the index in chunks of 512mb to evade the limitation of the Suffix Array Construction implementation.
 
-The module implements two methods, search_sequential & search_parallel. search_sequential searches through the inner chunks one by one where search_parallel searches concurrently. When dealing with big indices, bigger than 1gb for example, search_parallel would function faster. I advice to check them both with the resulted index to find which one fits better.
+The module implements multiple methods.
+`search` - search concurrently for a substring existed in different entries within the index file. As the index file getting bigger with multiple inner chunks, the concurrency effect increases.
+`count_entries` - return the number of entries in the index file consisting of the substring.
+`count_occurrences` - return the number of occurrences of the substring in all the entries. If the substring exists multiple times in the same entry, each occurrence will be counted.
 
 
 ### Built With
@@ -39,20 +44,21 @@ The module implements two methods, search_sequential & search_parallel. search_s
 
 ### Performance
 
-| Library  | Text Size | Function | Time | #Results | Improvement Factor |
-| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | 500mb | Ripgrepy('text_one', '500mb').run().as_string.split('\n') | 127 ms ± 694 µs per loop | 12553 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 500mb | reader.search_sequential('text_one') | 2.48 ms ± 53.4 µs per loop | 12553 | 51.2x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 500mb | reader.search_parallel('text_one') | 3.78 ms ± 350 µs per loop | 12553 | 33.6x |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | 500mb | Ripgrepy('text_two', '500mb').run().as_string.split('\n') | 127 ms ± 623 µs per loop | 769 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 500mb | reader.search_sequential('text_two') | 156 µs ± 916 ns per loop | 769 | 814.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 500mb | reader.search_parallel('text_two') | 251 µs ± 80.2 µs per loop | 769 | 506.0x |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | 6gb | Ripgrepy('text_one', '6gb').run().as_string.split('\n') | 1.38 s ± 3.82 ms | 206884 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 6gb | reader.search_sequential('text_one') | 93.7 ms ± 2.16 ms per loop | 206884 | 15.3x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 6gb | reader.search_parallel('text_one') | 34.3 ms ± 321 µs per loop | 206884 | 40.5x |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | 6gb | Ripgrepy('text_two', '6gb').run().as_string.split('\n') | 1.61 s ± 37.2 ms per loop | 6921 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 6gb | reader.search_sequential('text_two') | 2.22 ms ± 79.3 µs per loop | 6921 | 725.2x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | 6gb | reader.search_parallel('text_two') | 1.38 ms ± 26 µs per loop | 6921 | 1166.6x |
+#### 500MB File
+| Library | Function | Time | #Results | Improvement Factor |
+| ------------- | ------------- | ------------- | ------------- | ------------- |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_one', '500mb').run().as_string.split('\n') | 148ms | 2367 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_one') | 1.28ms | 2367 | 115.6x |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '500mb').run().as_string.split('\n') | 116ms | 159 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 228µs | 159 | 508.7x |
+
+#### 6000MB File
+| Library | Function | Time | #Results | Improvement Factor |
+| ------------- | ------------- | ------------- | ------------- | ------------- |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_one', '6000mb').run().as_string.split('\n') | 2.4s | 59538 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search_parallel('text_one') | 43.5ms | 59538 | 55.1x |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '6000mb').run().as_string.split('\n') | 1.5s | 7266 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search_sequential('text_two') | 4.51ms | 7266 | 332.6x |
 
 ### Prerequisites
 
