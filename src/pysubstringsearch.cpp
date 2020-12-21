@@ -240,6 +240,69 @@ class Reader {
             return results;
         }
 
+        inline std::optional<std::tuple<std::int32_t, std::int32_t>> get_substring_positions(
+            const std::string & substring,
+            std::uint32_t file_index
+        ) {
+            const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
+
+            // The index file first 4 bytes are the size of the index file
+            // in a uint32_t format, hence starting from the 5th byte.
+            std::uint64_t left_anchor = 4;
+            std::uint64_t right_anchor = suffix_array_file_stream->size;
+
+            std::optional<std::uint64_t> first_suffix_array_index = std::nullopt;
+            std::optional<std::uint64_t> last_suffix_array_index = std::nullopt;
+            while (left_anchor <= right_anchor) {
+                std::uint64_t middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
+
+                std::int32_t index;
+                suffix_array_file_stream->seekg(middle_anchor);
+                suffix_array_file_stream->read((char *)&index, sizeof(index));
+
+                auto distance = std::memcmp(substring.c_str(), &text_vector[index], substring.size());
+                if (distance < 0) {
+                    right_anchor = middle_anchor - 4;
+                } else if (distance > 0) {
+                    left_anchor = middle_anchor + 4;
+                } else {
+                    first_suffix_array_index = middle_anchor;
+                    if (!last_suffix_array_index.has_value()) {
+                        last_suffix_array_index = middle_anchor;
+                    }
+                    right_anchor = middle_anchor - 4;
+                }
+            }
+            if (!first_suffix_array_index.has_value()) {
+                return std::nullopt;
+            }
+
+            left_anchor = last_suffix_array_index.value();
+            right_anchor = suffix_array_file_stream->size;
+            while (left_anchor <= right_anchor) {
+                std::uint64_t middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
+
+                std::int32_t index;
+                suffix_array_file_stream->seekg(middle_anchor);
+                suffix_array_file_stream->read((char *)&index, sizeof(index));
+
+                auto distance = std::memcmp(substring.c_str(), &text_vector[index], substring.size());
+                if (distance < 0) {
+                    right_anchor = middle_anchor - 4;
+                } else if (distance > 0) {
+                    left_anchor = middle_anchor + 4;
+                } else {
+                    last_suffix_array_index = middle_anchor;
+                    left_anchor = middle_anchor + 4;
+                }
+            }
+
+            return std::make_tuple(
+                first_suffix_array_index.value(),
+                last_suffix_array_index.value()
+            );
+        }
+
         inline std::vector<std::string> search_specific_file(
             const std::string & substring,
             std::uint32_t file_index
@@ -247,75 +310,31 @@ class Reader {
             std::vector<std::string> results;
             std::unordered_set<std::int32_t> results_indices;
 
-            const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
-            std::int32_t index;
-
-            std::uint64_t left_anchor = 4;
-            std::uint64_t right_anchor = suffix_array_file_stream->size;
-            std::uint64_t first_suffix_array_index = std::numeric_limits<std::uint64_t>::max();
-
-            while (left_anchor <= right_anchor) {
-                std::uint64_t middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
-
-                suffix_array_file_stream->seekg(middle_anchor);
-                suffix_array_file_stream->read((char *)&index, sizeof(index));
-
-                std::string_view suffix(&text_vector[index], substring.size());
-
-                auto distance = std::memcmp(
-                    substring.c_str(),
-                    suffix.data(),
-                    substring.size()
-                );
-                if (distance < 0) {
-                    right_anchor = middle_anchor - 4;
-                } else if (distance > 0) {
-                    left_anchor = middle_anchor + 4;
-                } else {
-                    first_suffix_array_index = middle_anchor;
-                    right_anchor = middle_anchor - 4;
-                }
-            }
-            if (first_suffix_array_index == std::numeric_limits<std::uint64_t>::max()) {
+            auto substring_positions = this->get_substring_positions(
+                substring,
+                file_index
+            );
+            if (!substring_positions.has_value()) {
                 return results;
             }
 
-            std::uint64_t current_index_position = first_suffix_array_index;
-            while (current_index_position < suffix_array_file_stream->size) {
-                std::vector<std::int32_t> suffixes_vector(100, -1);
-                suffix_array_file_stream->seekg(current_index_position);
-                suffix_array_file_stream->read((char *)suffixes_vector.data(), sizeof(std::int32_t) * 100);
+            const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
+            auto [first_text_index, last_text_index] = substring_positions.value();
+            for (std::int32_t suffix_index = first_text_index; suffix_index <= last_text_index; suffix_index += sizeof(std::int32_t)) {
+                std::int32_t text_index;
+                suffix_array_file_stream->seekg(suffix_index);
+                suffix_array_file_stream->read((char *)&text_index, sizeof(std::int32_t));
 
-                bool finished = false;
-                for (std::int32_t suffix_index : suffixes_vector) {
-                    if (suffix_index == -1) {
+                std::int32_t entry_start = text_index;
+                for (; entry_start > 0; entry_start -= 1) {
+                    if (text_vector[entry_start - 1] == '\0') {
                         break;
                     }
-                    auto distance = std::memcmp(
-                        substring.c_str(),
-                        &text_vector[suffix_index],
-                        substring.size()
-                    );
-                    if (distance != 0) {
-                        finished = true;
-                        break;
-                    }
-
-                    for (; suffix_index > 0; suffix_index -= 1) {
-                        if (text_vector[suffix_index - 1] == '\0') {
-                            break;
-                        }
-                    }
-                    const auto & [iterator, inserted] = results_indices.emplace(suffix_index);
-                    if (inserted == true) {
-                        results.push_back(std::string(&text_vector[suffix_index]));
-                    }
                 }
-                if (finished) {
-                    break;
+                const auto & [iterator, inserted] = results_indices.emplace(entry_start);
+                if (inserted == true) {
+                    results.push_back(std::string(&text_vector[entry_start]));
                 }
-
-                current_index_position += sizeof(std::int32_t) * 100;
             }
 
             return results;
