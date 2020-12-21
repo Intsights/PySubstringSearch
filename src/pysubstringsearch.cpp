@@ -291,17 +291,19 @@ class Reader {
             if (!substring_positions.has_value()) {
                 return;
             }
-
-            const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
             auto [first_text_index, last_text_index] = substring_positions.value();
-            suffix_array_file_stream->seekg(first_text_index);
+
             auto number_of_text_indices = ((last_text_index - first_text_index) / 4) + 1;
             std::vector<std::int32_t> text_indices(number_of_text_indices);
-            std::unordered_set<std::int32_t> entries_indices(number_of_text_indices);
+
+            const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
+            suffix_array_file_stream->seekg(first_text_index);
             suffix_array_file_stream->read(
                 (char *)text_indices.data(),
                 sizeof(std::int32_t) * number_of_text_indices
             );
+
+            std::unordered_set<std::string> current_entries(number_of_text_indices);
             for (std::int32_t text_index : text_indices) {
                 std::int32_t entry_start = text_index;
                 for (; entry_start > 0; entry_start -= 1) {
@@ -309,13 +311,12 @@ class Reader {
                         break;
                     }
                 }
-                const auto & [iterator, inserted] = entries_indices.emplace(entry_start);
-                if (inserted == true) {
-                    this->entries_lock.lock();
-                    entries.push_back(std::string(&text_vector[entry_start]));
-                    this->entries_lock.unlock();
-                }
+                current_entries.emplace(&text_vector[entry_start]);
             }
+
+            this->entries_lock.lock();
+            entries.insert(entries.end(), current_entries.begin(), current_entries.end());
+            this->entries_lock.unlock();
         }
 
         std::vector<std::pair<std::shared_ptr<subifstream>, std::vector<char>>> files;
