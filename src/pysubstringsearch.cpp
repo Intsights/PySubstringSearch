@@ -7,6 +7,7 @@
 #include <cstring>
 #include <thread>
 #include <future>
+#include <mutex>
 
 #include "msufsort.hpp"
 
@@ -191,50 +192,25 @@ class Reader {
 
         ~Reader() {}
 
-        std::vector<std::string> search_parallel(
+        std::vector<std::string> search(
             const std::string & substring
         ) {
             std::vector<std::string> results;
-            std::vector<std::future<std::vector<std::string>>> futures;
+            std::vector<std::future<void>> futures;
 
             for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
                 auto future = std::async(
                     &Reader::search_specific_file,
                     this,
+                    std::ref(results),
                     substring,
                     file_index
                 );
-                if (this->files.size() == 1) {
-                    return future.get();
-                } else {
-                    futures.push_back(std::move(future));
-                }
+                futures.push_back(std::move(future));
             }
 
             for (auto & future : futures) {
-                auto result = future.get();
-                results.insert(results.end(), result.begin(), result.end());
-            }
-
-            return results;
-        }
-
-        std::vector<std::string> search_sequential(
-            const std::string & substring
-        ) {
-            std::vector<std::string> results;
-            std::unordered_set<std::int32_t> results_indices;
-
-            for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
-                auto result = this->search_specific_file(
-                    substring,
-                    file_index
-                );
-                if (this->files.size() == 1) {
-                    return result;
-                } else {
-                    results.insert(results.end(), result.begin(), result.end());
-                }
+                future.wait();
             }
 
             return results;
@@ -303,11 +279,11 @@ class Reader {
             );
         }
 
-        inline std::vector<std::string> search_specific_file(
+        inline void search_specific_file(
+            std::vector<std::string> & results,
             const std::string & substring,
             std::uint32_t file_index
         ) {
-            std::vector<std::string> results;
             std::unordered_set<std::int32_t> results_indices;
 
             auto substring_positions = this->get_substring_positions(
@@ -315,7 +291,7 @@ class Reader {
                 file_index
             );
             if (!substring_positions.has_value()) {
-                return results;
+                return;
             }
 
             const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
@@ -333,14 +309,14 @@ class Reader {
                 }
                 const auto & [iterator, inserted] = results_indices.emplace(entry_start);
                 if (inserted == true) {
+                    const std::lock_guard<std::mutex> lock(this->results_lock);
                     results.push_back(std::string(&text_vector[entry_start]));
                 }
             }
-
-            return results;
         }
 
         std::vector<std::pair<std::shared_ptr<subifstream>, std::vector<char>>> files;
+        std::mutex results_lock;
 };
 
 PYBIND11_MODULE(pysubstringsearch, m) {
@@ -351,14 +327,8 @@ PYBIND11_MODULE(pysubstringsearch, m) {
             pybind11::arg("index_file_path")
         )
         .def(
-            "search_parallel",
-            &Reader::search_parallel,
-            "search over an index file for a substring",
-            pybind11::arg("substring")
-        )
-        .def(
-            "search_sequential",
-            &Reader::search_sequential,
+            "search",
+            &Reader::search,
             "search over an index file for a substring",
             pybind11::arg("substring")
         );

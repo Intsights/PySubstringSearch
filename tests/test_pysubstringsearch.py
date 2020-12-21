@@ -27,13 +27,7 @@ class PySubstringSearchTestCase(
                 index_file_path=f'{tmp_directory}/output.idx',
             )
             self.assertCountEqual(
-                first=reader.search_parallel(
-                    substring=substring,
-                ),
-                second=expected_results,
-            )
-            self.assertCountEqual(
-                first=reader.search_sequential(
+                first=reader.search(
                     substring=substring,
                 ),
                 second=expected_results,
