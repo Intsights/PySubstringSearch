@@ -7,6 +7,7 @@
 #include <cstring>
 #include <thread>
 #include <future>
+#include <mutex>
 
 #include "msufsort.hpp"
 
@@ -191,137 +192,224 @@ class Reader {
 
         ~Reader() {}
 
-        std::vector<std::string> search_parallel(
+        std::vector<std::string> search(
             const std::string & substring
         ) {
-            std::vector<std::string> results;
-            std::vector<std::future<std::vector<std::string>>> futures;
+            std::vector<std::string> entries;
+            std::vector<std::future<void>> futures;
 
             for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
                 auto future = std::async(
-                    &Reader::search_specific_file,
+                    &Reader::search_entries_in_file,
+                    this,
+                    std::ref(entries),
+                    substring,
+                    file_index
+                );
+                futures.push_back(std::move(future));
+            }
+
+            for (auto & future : futures) {
+                future.wait();
+            }
+
+            return entries;
+        }
+
+        std::uint32_t count_occurrences(
+            const std::string & substring
+        ) {
+            auto number_of_occurrences = 0;
+            std::vector<std::future<std::optional<std::tuple<std::int32_t, std::int32_t>>>> futures;
+
+            for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
+                auto future = std::async(
+                    &Reader::get_substring_positions,
                     this,
                     substring,
                     file_index
                 );
-                if (this->files.size() == 1) {
-                    return future.get();
-                } else {
-                    futures.push_back(std::move(future));
-                }
+                futures.push_back(std::move(future));
             }
 
             for (auto & future : futures) {
                 auto result = future.get();
-                results.insert(results.end(), result.begin(), result.end());
-            }
-
-            return results;
-        }
-
-        std::vector<std::string> search_sequential(
-            const std::string & substring
-        ) {
-            std::vector<std::string> results;
-            std::unordered_set<std::int32_t> results_indices;
-
-            for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
-                auto result = this->search_specific_file(
-                    substring,
-                    file_index
-                );
-                if (this->files.size() == 1) {
-                    return result;
-                } else {
-                    results.insert(results.end(), result.begin(), result.end());
+                if (result.has_value()) {
+                    auto [first_text_index, last_text_index] = result.value();
+                    auto number_of_text_indices = ((last_text_index - first_text_index) / 4) + 1;
+                    number_of_occurrences += number_of_text_indices;
                 }
             }
 
-            return results;
+            return number_of_occurrences;
         }
 
-        inline std::vector<std::string> search_specific_file(
+        std::uint32_t count_entries(
+            const std::string & substring
+        ) {
+            auto number_of_entries = 0;
+            std::vector<std::future<std::size_t>> futures;
+
+            for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
+                auto future = std::async(
+                    &Reader::count_entries_in_file,
+                    this,
+                    substring,
+                    file_index
+                );
+                futures.push_back(std::move(future));
+            }
+
+            for (auto & future : futures) {
+                auto number_of_entries_in_file = future.get();
+                number_of_entries += number_of_entries_in_file;
+            }
+
+            return number_of_entries;
+        }
+
+        inline std::optional<std::tuple<std::int32_t, std::int32_t>> get_substring_positions(
             const std::string & substring,
             std::uint32_t file_index
         ) {
-            std::vector<std::string> results;
-            std::unordered_set<std::int32_t> results_indices;
-
             const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
-            std::int32_t index;
 
+            // The index file first 4 bytes are the size of the index file
+            // in a uint32_t format, hence starting from the 5th byte.
             std::uint64_t left_anchor = 4;
             std::uint64_t right_anchor = suffix_array_file_stream->size;
-            std::uint64_t first_suffix_array_index = std::numeric_limits<std::uint64_t>::max();
 
+            std::optional<std::uint64_t> first_suffix_array_index = std::nullopt;
+            std::optional<std::uint64_t> last_suffix_array_index = std::nullopt;
             while (left_anchor <= right_anchor) {
                 std::uint64_t middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
 
+                std::int32_t text_index;
                 suffix_array_file_stream->seekg(middle_anchor);
-                suffix_array_file_stream->read((char *)&index, sizeof(index));
+                suffix_array_file_stream->read((char *)&text_index, sizeof(text_index));
 
-                std::string_view suffix(&text_vector[index], substring.size());
-
-                auto distance = std::memcmp(
-                    substring.c_str(),
-                    suffix.data(),
-                    substring.size()
-                );
+                auto distance = std::memcmp(substring.c_str(), &text_vector[text_index], substring.size());
                 if (distance < 0) {
                     right_anchor = middle_anchor - 4;
                 } else if (distance > 0) {
                     left_anchor = middle_anchor + 4;
                 } else {
                     first_suffix_array_index = middle_anchor;
+                    if (!last_suffix_array_index.has_value()) {
+                        last_suffix_array_index = middle_anchor;
+                    }
                     right_anchor = middle_anchor - 4;
                 }
             }
-            if (first_suffix_array_index == std::numeric_limits<std::uint64_t>::max()) {
-                return results;
+            if (!first_suffix_array_index.has_value()) {
+                return std::nullopt;
             }
 
-            std::uint64_t current_index_position = first_suffix_array_index;
-            while (current_index_position < suffix_array_file_stream->size) {
-                std::vector<std::int32_t> suffixes_vector(100, -1);
-                suffix_array_file_stream->seekg(current_index_position);
-                suffix_array_file_stream->read((char *)suffixes_vector.data(), sizeof(std::int32_t) * 100);
+            left_anchor = last_suffix_array_index.value();
+            right_anchor = suffix_array_file_stream->size;
+            while (left_anchor <= right_anchor) {
+                std::uint64_t middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
 
-                bool finished = false;
-                for (std::int32_t suffix_index : suffixes_vector) {
-                    if (suffix_index == -1) {
-                        break;
-                    }
-                    auto distance = std::memcmp(
-                        substring.c_str(),
-                        &text_vector[suffix_index],
-                        substring.size()
-                    );
-                    if (distance != 0) {
-                        finished = true;
-                        break;
-                    }
+                std::int32_t text_index;
+                suffix_array_file_stream->seekg(middle_anchor);
+                suffix_array_file_stream->read((char *)&text_index, sizeof(text_index));
 
-                    for (; suffix_index > 0; suffix_index -= 1) {
-                        if (text_vector[suffix_index - 1] == '\0') {
-                            break;
-                        }
-                    }
-                    const auto & [iterator, inserted] = results_indices.emplace(suffix_index);
-                    if (inserted == true) {
-                        results.push_back(std::string(&text_vector[suffix_index]));
-                    }
+                auto distance = std::memcmp(substring.c_str(), &text_vector[text_index], substring.size());
+                if (distance < 0) {
+                    right_anchor = middle_anchor - 4;
+                } else if (distance > 0) {
+                    left_anchor = middle_anchor + 4;
+                } else {
+                    last_suffix_array_index = middle_anchor;
+                    left_anchor = middle_anchor + 4;
                 }
-                if (finished) {
-                    break;
-                }
-
-                current_index_position += sizeof(std::int32_t) * 100;
             }
 
-            return results;
+            return std::make_tuple(
+                first_suffix_array_index.value(),
+                last_suffix_array_index.value()
+            );
+        }
+
+        inline void search_entries_in_file(
+            std::vector<std::string> & entries,
+            const std::string & substring,
+            std::uint32_t file_index
+        ) {
+            auto substring_positions = this->get_substring_positions(
+                substring,
+                file_index
+            );
+            if (!substring_positions.has_value()) {
+                return;
+            }
+            auto [first_text_index, last_text_index] = substring_positions.value();
+
+            auto number_of_text_indices = ((last_text_index - first_text_index) / 4) + 1;
+            std::vector<std::int32_t> text_indices(number_of_text_indices);
+
+            const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
+            suffix_array_file_stream->seekg(first_text_index);
+            suffix_array_file_stream->read(
+                (char *)text_indices.data(),
+                sizeof(std::int32_t) * number_of_text_indices
+            );
+
+            std::unordered_set<std::string> current_entries(number_of_text_indices);
+            for (std::int32_t text_index : text_indices) {
+                std::int32_t entry_start = text_index;
+                for (; entry_start > 0; entry_start -= 1) {
+                    if (text_vector[entry_start - 1] == '\0') {
+                        break;
+                    }
+                }
+                current_entries.emplace(&text_vector[entry_start]);
+            }
+
+            this->entries_lock.lock();
+            entries.insert(entries.end(), current_entries.begin(), current_entries.end());
+            this->entries_lock.unlock();
+        }
+
+        inline std::size_t count_entries_in_file(
+            const std::string & substring,
+            std::uint32_t file_index
+        ) {
+            auto substring_positions = this->get_substring_positions(
+                substring,
+                file_index
+            );
+            if (!substring_positions.has_value()) {
+                return 0;
+            }
+            auto [first_text_index, last_text_index] = substring_positions.value();
+
+            auto number_of_text_indices = ((last_text_index - first_text_index) / 4) + 1;
+            std::vector<std::int32_t> text_indices(number_of_text_indices);
+
+            const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
+            suffix_array_file_stream->seekg(first_text_index);
+            suffix_array_file_stream->read(
+                (char *)text_indices.data(),
+                sizeof(std::int32_t) * number_of_text_indices
+            );
+
+            std::unordered_set<std::int32_t> entries_start_indices(number_of_text_indices);
+            for (std::int32_t text_index : text_indices) {
+                std::int32_t entry_start = text_index;
+                for (; entry_start > 0; entry_start -= 1) {
+                    if (text_vector[entry_start - 1] == '\0') {
+                        break;
+                    }
+                }
+                entries_start_indices.emplace(entry_start);
+            }
+
+            return entries_start_indices.size();
         }
 
         std::vector<std::pair<std::shared_ptr<subifstream>, std::vector<char>>> files;
+        std::mutex entries_lock;
 };
 
 PYBIND11_MODULE(pysubstringsearch, m) {
@@ -332,15 +420,21 @@ PYBIND11_MODULE(pysubstringsearch, m) {
             pybind11::arg("index_file_path")
         )
         .def(
-            "search_parallel",
-            &Reader::search_parallel,
-            "search over an index file for a substring",
+            "search",
+            &Reader::search,
+            "search over an index file for a substring, returns list of distinct entries",
             pybind11::arg("substring")
         )
         .def(
-            "search_sequential",
-            &Reader::search_sequential,
-            "search over an index file for a substring",
+            "count_occurrences",
+            &Reader::count_occurrences,
+            "search over an index file for a substring, returns the number of occurrences",
+            pybind11::arg("substring")
+        )
+        .def(
+            "count_entries",
+            &Reader::count_entries,
+            "search over an index file for a substring, returns the number of entries",
             pybind11::arg("substring")
         );
     pybind11::class_<Writer>(m, "Writer")
