@@ -195,14 +195,14 @@ class Reader {
         std::vector<std::string> search(
             const std::string & substring
         ) {
-            std::vector<std::string> results;
+            std::vector<std::string> entries;
             std::vector<std::future<void>> futures;
 
             for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
                 auto future = std::async(
                     &Reader::search_specific_file,
                     this,
-                    std::ref(results),
+                    std::ref(entries),
                     substring,
                     file_index
                 );
@@ -213,7 +213,13 @@ class Reader {
                 future.wait();
             }
 
-            return results;
+            std::sort(entries.begin(), entries.end());
+            entries.erase(
+                std::unique(entries.begin(), entries.end()),
+                entries.end()
+            );
+
+            return entries;
         }
 
         inline std::optional<std::tuple<std::int32_t, std::int32_t>> get_substring_positions(
@@ -232,11 +238,11 @@ class Reader {
             while (left_anchor <= right_anchor) {
                 std::uint64_t middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
 
-                std::int32_t index;
+                std::int32_t text_index;
                 suffix_array_file_stream->seekg(middle_anchor);
-                suffix_array_file_stream->read((char *)&index, sizeof(index));
+                suffix_array_file_stream->read((char *)&text_index, sizeof(text_index));
 
-                auto distance = std::memcmp(substring.c_str(), &text_vector[index], substring.size());
+                auto distance = std::memcmp(substring.c_str(), &text_vector[text_index], substring.size());
                 if (distance < 0) {
                     right_anchor = middle_anchor - 4;
                 } else if (distance > 0) {
@@ -258,11 +264,11 @@ class Reader {
             while (left_anchor <= right_anchor) {
                 std::uint64_t middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
 
-                std::int32_t index;
+                std::int32_t text_index;
                 suffix_array_file_stream->seekg(middle_anchor);
-                suffix_array_file_stream->read((char *)&index, sizeof(index));
+                suffix_array_file_stream->read((char *)&text_index, sizeof(text_index));
 
-                auto distance = std::memcmp(substring.c_str(), &text_vector[index], substring.size());
+                auto distance = std::memcmp(substring.c_str(), &text_vector[text_index], substring.size());
                 if (distance < 0) {
                     right_anchor = middle_anchor - 4;
                 } else if (distance > 0) {
@@ -280,7 +286,7 @@ class Reader {
         }
 
         inline void search_specific_file(
-            std::vector<std::string> & results,
+            std::vector<std::string> & entries,
             const std::string & substring,
             std::uint32_t file_index
         ) {
@@ -295,7 +301,7 @@ class Reader {
             const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
             auto [first_text_index, last_text_index] = substring_positions.value();
             suffix_array_file_stream->seekg(first_text_index);
-            auto number_of_text_indices = last_text_index - first_text_index + 1;
+            auto number_of_text_indices = ((last_text_index - first_text_index) / 4) + 1;
             std::vector<std::int32_t> text_indices(number_of_text_indices);
             suffix_array_file_stream->read(
                 (char *)text_indices.data(),
@@ -308,14 +314,14 @@ class Reader {
                         break;
                     }
                 }
-                this->results_lock.lock();
-                results.push_back(std::string(&text_vector[entry_start]));
-                this->results_lock.unlock();
+                this->entries_lock.lock();
+                entries.push_back(std::string(&text_vector[entry_start]));
+                this->entries_lock.unlock();
             }
         }
 
         std::vector<std::pair<std::shared_ptr<subifstream>, std::vector<char>>> files;
-        std::mutex results_lock;
+        std::mutex entries_lock;
 };
 
 PYBIND11_MODULE(pysubstringsearch, m) {
