@@ -284,8 +284,6 @@ class Reader {
             const std::string & substring,
             std::uint32_t file_index
         ) {
-            std::unordered_set<std::int32_t> results_indices;
-
             auto substring_positions = this->get_substring_positions(
                 substring,
                 file_index
@@ -296,22 +294,23 @@ class Reader {
 
             const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
             auto [first_text_index, last_text_index] = substring_positions.value();
-            for (std::int32_t suffix_index = first_text_index; suffix_index <= last_text_index; suffix_index += sizeof(std::int32_t)) {
-                std::int32_t text_index;
-                suffix_array_file_stream->seekg(suffix_index);
-                suffix_array_file_stream->read((char *)&text_index, sizeof(std::int32_t));
-
+            suffix_array_file_stream->seekg(first_text_index);
+            auto number_of_text_indices = last_text_index - first_text_index + 1;
+            std::vector<std::int32_t> text_indices(number_of_text_indices);
+            suffix_array_file_stream->read(
+                (char *)text_indices.data(),
+                sizeof(std::int32_t) * number_of_text_indices
+            );
+            for (std::int32_t text_index : text_indices) {
                 std::int32_t entry_start = text_index;
                 for (; entry_start > 0; entry_start -= 1) {
                     if (text_vector[entry_start - 1] == '\0') {
                         break;
                     }
                 }
-                const auto & [iterator, inserted] = results_indices.emplace(entry_start);
-                if (inserted == true) {
-                    const std::lock_guard<std::mutex> lock(this->results_lock);
-                    results.push_back(std::string(&text_vector[entry_start]));
-                }
+                this->results_lock.lock();
+                results.push_back(std::string(&text_vector[entry_start]));
+                this->results_lock.unlock();
             }
         }
 
