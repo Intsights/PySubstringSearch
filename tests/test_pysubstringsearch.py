@@ -33,6 +33,27 @@ class PySubstringSearchTestCase(
                 second=expected_results,
             )
 
+            number_of_entries = 0
+            for entry in strings:
+                if substring in entry:
+                    number_of_entries += 1
+            self.assertEqual(
+                first=reader.count_entries(
+                    substring=substring,
+                ),
+                second=number_of_entries,
+            )
+
+            total_occurrences = 0
+            for entry in strings:
+                total_occurrences += entry.count(substring)
+            self.assertEqual(
+                first=reader.count_occurrences(
+                    substring=substring,
+                ),
+                second=total_occurrences,
+            )
+
     def test_file_not_found(
         self,
     ):
@@ -140,29 +161,56 @@ class PySubstringSearchTestCase(
         self,
     ):
         strings = [
-            '诶比西',
+            'رجعوني عنيك لأيامي اللي راحوا',
+            'علموني أندم على الماضي وجراحه',
+            'اللي شفته قبل ما تشوفك عنيه',
+            'عمر ضايع يحسبوه إزاي عليّ',
+            'انت عمري اللي ابتدي بنورك صباحه',
+            'قد ايه من عمري قبلك راح وعدّى',
+            'يا حبيبي قد ايه من عمري راح',
+            'ولا شاف القلب قبلك فرحة واحدة',
+            'ولا داق في الدنيا غير طعم الجراح',
+            'ابتديت دلوقت بس أحب عمري',
+            'ابتديت دلوقت اخاف لا العمر يجري',
+            'كل فرحه اشتاقها من قبلك خيالي',
+            'التقاها في نور عنيك قلبي وفكري',
+            'يا حياة قلبي يا أغلى من حياتي',
+            'ليه ما قابلتش هواك يا حبيبي بدري',
+            'اللي شفته قبل ما تشوفك عنيه',
+            'عمر ضايع يحسبوه إزاي عليّ',
+            'انت عمري اللي ابتدي بنورك صباحه',
+            'الليالي الحلوه والشوق والمحبة',
+            'من زمان والقلب شايلهم عشانك',
+            'دوق معايا الحب دوق حبه بحبه',
+            'من حنان قلبي اللي طال شوقه لحنانك',
+            'هات عنيك تسرح في دنيتهم عنيه',
+            'هات ايديك ترتاح للمستهم ايديه',
         ]
 
         self.assert_substring_search(
             strings=strings,
-            substring='诶',
+            substring='زمان',
             expected_results=[
-                '诶比西',
+                'من زمان والقلب شايلهم عشانك',
             ],
         )
 
         self.assert_substring_search(
             strings=strings,
-            substring='诶比',
+            substring='في',
             expected_results=[
-                '诶比西',
+                'هات عنيك تسرح في دنيتهم عنيه',
+                'التقاها في نور عنيك قلبي وفكري',
+                'ولا داق في الدنيا غير طعم الجراح',
             ],
         )
 
         self.assert_substring_search(
             strings=strings,
-            substring='比诶',
-            expected_results=[],
+            substring='حنان',
+            expected_results=[
+                'من حنان قلبي اللي طال شوقه لحنانك',
+            ],
         )
 
         self.assert_substring_search(

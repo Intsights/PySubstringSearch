@@ -32,9 +32,9 @@
 PySubstringSearch is a library intended for searching over an index file for substring patterns. The library is written in C++ to achieve speed and efficiency. The library also uses [Msufsort](https://github.com/michaelmaniscalco/msufsort) suffix array construction library for string indexing. The created index consists of the original text and a 32bit suffix array structs. The library relies on a proprietary container protocol to hold the original text along with the index in chunks of 512mb to evade the limitation of the Suffix Array Construction implementation.
 
 The module implements multiple methods.
-`search` - search concurrently for a substring existed in different entries within the index file. As the index file getting bigger with multiple inner chunks, the concurrency effect increases.
-`count_entries` - return the number of entries in the index file consisting of the substring.
-`count_occurrences` - return the number of occurrences of the substring in all the entries. If the substring exists multiple times in the same entry, each occurrence will be counted.
+- `search` - search concurrently for a substring existed in different entries within the index file. As the index file getting bigger with multiple inner chunks, the concurrency effect increases.
+- `count_entries` - return the number of entries in the index file consisting of the substring.
+- `count_occurrences` - return the number of occurrences of the substring in all the entries. If the substring exists multiple times in the same entry, each occurrence will be counted.
 
 
 ### Built With
@@ -110,21 +110,23 @@ reader = pysubstringsearch.Reader(
     index_file_path='output.idx',
 )
 
-# lookup for a substring sequentially
-reader.search_sequential('short')
+# lookup for a substring
+reader.search('short')
 >>> ['some short string']
 
-# lookup for a substring sequentially
-reader.search_sequential('string')
+# lookup for a substring
+reader.search('string')
 >>> ['some short string', 'another but now a longer string']
 
-# lookup for a substring concurrently
-reader.search_parallel('short')
->>> ['some short string']
+# count the number of occurrences
+# ['some short string', 'another string now, but a longer string']
+reader.count_occurences('string')
+>>> 3
 
-# lookup for a substring concurrently
-reader.search_parallel('string')
->>> ['some short string', 'another but now a longer string']
+# count the number of entries
+# ['some short string', 'another string now, but a longer string']
+reader.count_occurences('string')
+>>> 2
 ```
 
 

@@ -200,7 +200,7 @@ class Reader {
 
             for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
                 auto future = std::async(
-                    &Reader::search_specific_file,
+                    &Reader::search_entries_in_file,
                     this,
                     std::ref(entries),
                     substring,
@@ -214,6 +214,58 @@ class Reader {
             }
 
             return entries;
+        }
+
+        std::uint32_t count_occurrences(
+            const std::string & substring
+        ) {
+            auto number_of_occurrences = 0;
+            std::vector<std::future<std::optional<std::tuple<std::int32_t, std::int32_t>>>> futures;
+
+            for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
+                auto future = std::async(
+                    &Reader::get_substring_positions,
+                    this,
+                    substring,
+                    file_index
+                );
+                futures.push_back(std::move(future));
+            }
+
+            for (auto & future : futures) {
+                auto result = future.get();
+                if (result.has_value()) {
+                    auto [first_text_index, last_text_index] = result.value();
+                    auto number_of_text_indices = ((last_text_index - first_text_index) / 4) + 1;
+                    number_of_occurrences += number_of_text_indices;
+                }
+            }
+
+            return number_of_occurrences;
+        }
+
+        std::uint32_t count_entries(
+            const std::string & substring
+        ) {
+            auto number_of_entries = 0;
+            std::vector<std::future<std::size_t>> futures;
+
+            for (std::uint32_t file_index = 0; file_index < this->files.size(); ++file_index) {
+                auto future = std::async(
+                    &Reader::count_entries_in_file,
+                    this,
+                    substring,
+                    file_index
+                );
+                futures.push_back(std::move(future));
+            }
+
+            for (auto & future : futures) {
+                auto number_of_entries_in_file = future.get();
+                number_of_entries += number_of_entries_in_file;
+            }
+
+            return number_of_entries;
         }
 
         inline std::optional<std::tuple<std::int32_t, std::int32_t>> get_substring_positions(
@@ -279,7 +331,7 @@ class Reader {
             );
         }
 
-        inline void search_specific_file(
+        inline void search_entries_in_file(
             std::vector<std::string> & entries,
             const std::string & substring,
             std::uint32_t file_index
@@ -319,6 +371,43 @@ class Reader {
             this->entries_lock.unlock();
         }
 
+        inline std::size_t count_entries_in_file(
+            const std::string & substring,
+            std::uint32_t file_index
+        ) {
+            auto substring_positions = this->get_substring_positions(
+                substring,
+                file_index
+            );
+            if (!substring_positions.has_value()) {
+                return 0;
+            }
+            auto [first_text_index, last_text_index] = substring_positions.value();
+
+            auto number_of_text_indices = ((last_text_index - first_text_index) / 4) + 1;
+            std::vector<std::int32_t> text_indices(number_of_text_indices);
+
+            const auto & [suffix_array_file_stream, text_vector] = this->files[file_index];
+            suffix_array_file_stream->seekg(first_text_index);
+            suffix_array_file_stream->read(
+                (char *)text_indices.data(),
+                sizeof(std::int32_t) * number_of_text_indices
+            );
+
+            std::unordered_set<std::int32_t> entries_start_indices(number_of_text_indices);
+            for (std::int32_t text_index : text_indices) {
+                std::int32_t entry_start = text_index;
+                for (; entry_start > 0; entry_start -= 1) {
+                    if (text_vector[entry_start - 1] == '\0') {
+                        break;
+                    }
+                }
+                entries_start_indices.emplace(entry_start);
+            }
+
+            return entries_start_indices.size();
+        }
+
         std::vector<std::pair<std::shared_ptr<subifstream>, std::vector<char>>> files;
         std::mutex entries_lock;
 };
@@ -334,6 +423,18 @@ PYBIND11_MODULE(pysubstringsearch, m) {
             "search",
             &Reader::search,
             "search over an index file for a substring, returns list of distinct entries",
+            pybind11::arg("substring")
+        )
+        .def(
+            "count_occurrences",
+            &Reader::count_occurrences,
+            "search over an index file for a substring, returns the number of occurrences",
+            pybind11::arg("substring")
+        )
+        .def(
+            "count_entries",
+            &Reader::count_entries,
+            "search over an index file for a substring, returns the number of entries",
             pybind11::arg("substring")
         );
     pybind11::class_<Writer>(m, "Writer")
