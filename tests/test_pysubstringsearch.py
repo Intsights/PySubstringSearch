@@ -33,35 +33,14 @@ class PySubstringSearchTestCase(
                 second=expected_results,
             )
 
-            number_of_entries = 0
-            for entry in strings:
-                if substring in entry:
-                    number_of_entries += 1
-            self.assertEqual(
-                first=reader.count_entries(
-                    substring=substring,
-                ),
-                second=number_of_entries,
-            )
-
-            total_occurrences = 0
-            for entry in strings:
-                total_occurrences += entry.count(substring)
-            self.assertEqual(
-                first=reader.count_occurrences(
-                    substring=substring,
-                ),
-                second=total_occurrences,
-            )
-
     def test_file_not_found(
         self,
     ):
         with self.assertRaises(
-            expected_exception=RuntimeError,
+            expected_exception=FileNotFoundError,
         ):
             pysubstringsearch.Reader(
-                index_file_path=f'missing_index_file_path',
+                index_file_path='missing_index_file_path',
             )
 
     def test_sanity(

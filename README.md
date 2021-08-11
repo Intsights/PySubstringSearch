@@ -3,7 +3,7 @@
         <img src="https://raw.githubusercontent.com/Intsights/PySubstringSearch/master/images/logo.png" alt="Logo">
     </a>
     <h3 align="center">
-        Python library for fast substring/pattern search written in C++ leveraging Suffix Array Algorithm
+        A Python library written in Rust that searches for substrings quickly using a Suffix Array
     </h3>
 </p>
 
@@ -20,7 +20,6 @@
   - [Performance](#performance)
     - [500MB File](#500mb-file)
     - [6000MB File](#6000mb-file)
-  - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
 - [License](#license)
@@ -29,12 +28,10 @@
 
 ## About The Project
 
-PySubstringSearch is a library intended for searching over an index file for substring patterns. The library is written in C++ to achieve speed and efficiency. The library also uses [Msufsort](https://github.com/michaelmaniscalco/msufsort) suffix array construction library for string indexing. The created index consists of the original text and a 32bit suffix array structs. The library relies on a proprietary container protocol to hold the original text along with the index in chunks of 512mb to evade the limitation of the Suffix Array Construction implementation.
+PySubstringSearch is a library designed to search over an index file for substring patterns. In order to achieve speed and efficiency, the library is written in Rust. For string indexing, the library uses [Msufsort](https://github.com/michaelmaniscalco/msufsort) suffix array construction library. The index created consists of the original text and a 32bit suffix array struct. To get around the limitations of the Suffix Array Construction implementation, the library uses a proprietary container protocol to hold the original text and index in chunks of 512MB.
 
-The module implements multiple methods.
-- `search` - search concurrently for a substring existed in different entries within the index file. As the index file getting bigger with multiple inner chunks, the concurrency effect increases.
-- `count_entries` - return the number of entries in the index file consisting of the substring.
-- `count_occurrences` - return the number of occurrences of the substring in all the entries. If the substring exists multiple times in the same entry, each occurrence will be counted.
+The module implements a method for searching.
+- `search` - Find different entries with the same substring concurrently. Concurrency increases as the index file grows in size with multiple inner chunks.
 
 
 ### Built With
@@ -60,24 +57,12 @@ The module implements multiple methods.
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '6000mb').run().as_string.split('\n') | 1.5s | 7266 | 1.0x |
 | [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 1.97ms | 7266 | 761.4x |
 
-### Prerequisites
-
-In order to compile this package you should have GCC & Python development package installed.
-* Fedora
-```sh
-sudo dnf install python3-devel gcc-c++
-```
-* Ubuntu 18.04
-```sh
-sudo apt install python3-dev g++-9
-```
 
 ### Installation
 
 ```sh
 pip3 install PySubstringSearch
 ```
-
 
 
 ## Usage
@@ -117,16 +102,6 @@ reader.search('short')
 # lookup for a substring
 reader.search('string')
 >>> ['some short string', 'another but now a longer string']
-
-# count the number of occurrences
-# ['some short string', 'another string now, but a longer string']
-reader.count_occurences('string')
->>> 3
-
-# count the number of entries
-# ['some short string', 'another string now, but a longer string']
-reader.count_occurences('string')
->>> 2
 ```
 
 

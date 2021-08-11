@@ -8,220 +8,193 @@
 #include <array>
 #include <vector>
 
-namespace maniscalco {
+#include "pysubstringsearch/src/msufsort.h"
 
-    class msufsort {
-        public:
-        using suffix_array = std::vector<std::int32_t>;
-        using suffix_value = std::uint32_t;
+class msufsort {
+    public:
+    using suffix_value = std::uint32_t;
 
-        msufsort(std::int32_t = 1);
-        ~msufsort();
+    msufsort(std::int32_t = 1);
+    ~msufsort();
 
-        suffix_array make_suffix_array(
-            std::uint8_t const *,
-            std::uint8_t const *);
+    void calculate_suffix_array(
+        uint8_t const * inputBegin,
+        uint8_t const * inputEnd,
+        int32_t * output
+    );
 
-        private:
-        static std::int32_t constexpr is_induced_sort = 0x40000000;
-        static std::int32_t constexpr is_tandem_repeat_length = 0x80000000;
-        static std::int32_t constexpr isa_flag_mask = is_induced_sort | is_tandem_repeat_length;
-        static std::int32_t constexpr isa_index_mask = ~isa_flag_mask;
+    private:
+    static std::int32_t constexpr is_induced_sort = 0x40000000;
+    static std::int32_t constexpr is_tandem_repeat_length = 0x80000000;
+    static std::int32_t constexpr isa_flag_mask = is_induced_sort | is_tandem_repeat_length;
+    static std::int32_t constexpr isa_index_mask = ~isa_flag_mask;
 
-        static std::int32_t constexpr preceding_suffix_is_type_a_flag = 0x80000000;
-        static std::int32_t constexpr mark_isa_when_sorted = 0x40000000;
-        static std::int32_t constexpr sa_index_mask = ~(preceding_suffix_is_type_a_flag | mark_isa_when_sorted);
-        static std::int32_t constexpr suffix_is_unsorted_b_type = sa_index_mask;
+    static std::int32_t constexpr preceding_suffix_is_type_a_flag = 0x80000000;
+    static std::int32_t constexpr mark_isa_when_sorted = 0x40000000;
+    static std::int32_t constexpr sa_index_mask = ~(preceding_suffix_is_type_a_flag | mark_isa_when_sorted);
+    static std::int32_t constexpr suffix_is_unsorted_b_type = sa_index_mask;
 
-        static constexpr std::int32_t insertion_sort_threshold = 16;
-        static std::int32_t constexpr min_match_length_for_tandem_repeats = (2 + sizeof(suffix_value) + sizeof(suffix_value));
+    static constexpr std::int32_t insertion_sort_threshold = 16;
+    static std::int32_t constexpr min_match_length_for_tandem_repeats = (2 + sizeof(suffix_value) + sizeof(suffix_value));
 
-        enum suffix_type {
-            a,
-            b,
-            bStar
-        };
+    enum suffix_type {
+        a,
+        b,
+        bStar
+    };
 
-        struct tandem_repeat_info {
-            tandem_repeat_info(
-                std::int32_t * partitionBegin,
-                std::int32_t * partitionEnd,
-                std::int32_t numTerminators,
-                std::int32_t tandemRepeatLength):
-                partitionBegin_(partitionBegin),
-                partitionEnd_(partitionEnd),
-                numTerminators_(numTerminators),
-                tandemRepeatLength_(tandemRepeatLength) {
-            }
+    struct tandem_repeat_info {
+        tandem_repeat_info(
+            std::int32_t * partitionBegin,
+            std::int32_t * partitionEnd,
+            std::int32_t numTerminators,
+            std::int32_t tandemRepeatLength):
+            partitionBegin_(partitionBegin),
+            partitionEnd_(partitionEnd),
+            numTerminators_(numTerminators),
+            tandemRepeatLength_(tandemRepeatLength) {
+        }
 
-            std::int32_t * partitionBegin_;
-            std::int32_t * partitionEnd_;
-            std::int32_t numTerminators_;
-            std::int32_t tandemRepeatLength_;
-        };
+        std::int32_t * partitionBegin_;
+        std::int32_t * partitionEnd_;
+        std::int32_t numTerminators_;
+        std::int32_t tandemRepeatLength_;
+    };
 
-        suffix_value get_value(
-            uint8_t const *,
-            std::int32_t) const;
+    suffix_value get_value(
+        uint8_t const *,
+        std::int32_t) const;
 
-        suffix_type get_suffix_type(
-            uint8_t const *);
+    suffix_type get_suffix_type(
+        uint8_t const *);
 
-        bool compare_suffixes(
-            std::uint8_t const *,
-            std::int32_t,
-            std::int32_t) const;
+    bool compare_suffixes(
+        std::uint8_t const *,
+        std::int32_t,
+        std::int32_t) const;
 
-        void insertion_sort(
-            std::int32_t *,
-            std::int32_t *,
-            int32_t,
-            uint64_t);
+    void multikey_insertion_sort(
+        std::int32_t *,
+        std::int32_t *,
+        std::int32_t,
+        suffix_value,
+        std::array<suffix_value, 2>,
+        std::vector<tandem_repeat_info> &);
 
-        void multikey_insertion_sort(
-            std::int32_t *,
-            std::int32_t *,
-            std::int32_t,
-            suffix_value,
-            std::array<suffix_value, 2>,
-            std::vector<tandem_repeat_info> &);
+    std::size_t partition_tandem_repeats(
+        std::int32_t *,
+        std::int32_t *,
+        std::int32_t,
+        std::vector<tandem_repeat_info> &);
 
-        std::size_t partition_tandem_repeats(
-            std::int32_t *,
-            std::int32_t *,
-            std::int32_t,
-            std::vector<tandem_repeat_info> &);
+    void count_suffixes(
+        uint8_t const *,
+        uint8_t const *,
+        std::array<int32_t *, 4>);
 
-        void count_suffixes(
-            uint8_t const *,
-            uint8_t const *,
-            std::array<int32_t *, 4>);
+    void second_stage_its();
 
-        void second_stage_its();
+    void second_stage_its_right_to_left_pass_single_threaded();
 
-        void second_stage_its_right_to_left_pass_single_threaded();
+    void second_stage_its_right_to_left_pass_multi_threaded();
 
-        void second_stage_its_right_to_left_pass_multi_threaded();
+    void second_stage_its_left_to_right_pass_single_threaded();
 
-        void second_stage_its_left_to_right_pass_single_threaded();
+    void second_stage_its_left_to_right_pass_multi_threaded();
 
-        void second_stage_its_left_to_right_pass_multi_threaded();
+    void first_stage_its();
 
-        void first_stage_its();
+    std::int32_t * multikey_quicksort(
+        std::int32_t *,
+        std::int32_t *,
+        std::size_t,
+        suffix_value,
+        std::array<suffix_value, 2>,
+        std::vector<tandem_repeat_info> &);
 
-        std::int32_t * multikey_quicksort(
-            std::int32_t *,
-            std::int32_t *,
-            std::size_t,
-            suffix_value,
-            std::array<suffix_value, 2>,
-            std::vector<tandem_repeat_info> &);
+    void initial_two_byte_radix_sort(
+        uint8_t const *,
+        uint8_t const *,
+        int32_t *);
 
-        void initial_two_byte_radix_sort(
-            uint8_t const *,
-            uint8_t const *,
-            int32_t *);
+    bool has_potential_tandem_repeats(
+        suffix_value,
+        std::array<suffix_value, 2>) const;
 
-        bool has_potential_tandem_repeats(
-            suffix_value,
-            std::array<suffix_value, 2>) const;
+    void complete_tandem_repeats(
+        std::vector<tandem_repeat_info> &);
 
-        void complete_tandem_repeats(
-            std::vector<tandem_repeat_info> &);
+    void complete_tandem_repeat(
+        std::int32_t *,
+        std::int32_t *,
+        std::int32_t,
+        std::int32_t);
 
-        void complete_tandem_repeat(
-            std::int32_t *,
-            std::int32_t *,
-            std::int32_t,
-            std::int32_t);
+    uint8_t const * inputBegin_;
 
-        uint8_t const * inputBegin_;
+    uint8_t const * inputEnd_;
 
-        uint8_t const * inputEnd_;
+    int32_t inputSize_;
 
-        int32_t inputSize_;
+    uint8_t const * getValueEnd_;
 
-        uint8_t const * getValueEnd_;
+    uint8_t copyEnd_[sizeof(suffix_value) << 1];
 
-        std::int32_t getValueMaxIndex_;
+    std::int32_t * suffixArrayBegin_;
 
-        uint8_t copyEnd_[sizeof(suffix_value) << 1];
+    std::int32_t * suffixArrayEnd_;
 
-        std::int32_t * suffixArrayBegin_;
+    std::int32_t * inverseSuffixArrayBegin_;
 
-        std::int32_t * suffixArrayEnd_;
+    std::int32_t * frontBucketOffset_[0x100];
 
-        std::int32_t * inverseSuffixArrayBegin_;
+    std::unique_ptr<std::int32_t *[]> backBucketOffset_;
 
-        std::int32_t * inverseSuffixArrayEnd_;
+    int32_t aCount_[0x100];
 
-        std::int32_t * frontBucketOffset_[0x100];
+    int32_t bCount_[0x100];
 
-        std::unique_ptr<std::int32_t *[]> backBucketOffset_;
+    int32_t numWorkerThreads_;
+    struct stack_frame {
+        std::int32_t * suffixArrayBegin;
+        std::int32_t * suffixArrayEnd;
+        std::size_t currentMatchLength;
+        suffix_value startingPattern;
+        std::array<suffix_value, 2> endingPattern;
+        std::vector<tandem_repeat_info> & tandemRepeatStack;
+    };
+    std::vector<std::future<void>> futures;
 
-        int32_t aCount_[0x100];
+}; // class msufsort
 
-        int32_t bCount_[0x100];
-
-        bool const tandemRepeatSortEnabled_ = true;
-
-        int32_t numWorkerThreads_;
-        struct stack_frame {
-            std::int32_t * suffixArrayBegin;
-            std::int32_t * suffixArrayEnd;
-            std::size_t currentMatchLength;
-            suffix_value startingPattern;
-            std::array<suffix_value, 2> endingPattern;
-            std::vector<tandem_repeat_info> & tandemRepeatStack;
-        };
-        std::vector<std::future<void>> futures;
-
-    }; // class msufsort
-
-    template<typename input_iter>
-    msufsort::suffix_array make_suffix_array(
-        input_iter,
-        input_iter,
-        int32_t = 1);
-
-} // namespace maniscalco
-
-template<typename input_iter>
-maniscalco::msufsort::suffix_array maniscalco::make_suffix_array(
-    input_iter begin,
-    input_iter end,
-    int32_t numThreads) {
-    if(numThreads <= 0)
-        numThreads = 1;
-    if(numThreads > (int32_t)std::thread::hardware_concurrency())
-        numThreads = (int32_t)std::thread::hardware_concurrency();
-    return msufsort(numThreads).make_suffix_array((uint8_t const *)&*begin, (uint8_t const *)&*end);
+void calculate_suffix_array(
+    uint8_t const * begin,
+    uint8_t const * end,
+    int32_t * output
+) {
+    int32_t numThreads = (int32_t)std::thread::hardware_concurrency();
+    return msufsort(numThreads).calculate_suffix_array(begin, end, output);
 }
 
-maniscalco::msufsort::msufsort(
-    int32_t numThreads):
+msufsort::msufsort(int32_t numThreads):
     inputBegin_(nullptr),
     inputEnd_(nullptr),
     inputSize_(),
     getValueEnd_(nullptr),
-    getValueMaxIndex_(),
     copyEnd_(),
     suffixArrayBegin_(nullptr),
     suffixArrayEnd_(nullptr),
     inverseSuffixArrayBegin_(nullptr),
-    inverseSuffixArrayEnd_(nullptr),
     frontBucketOffset_(),
     backBucketOffset_(new std::int32_t * [0x10000] {
     }),
     aCount_(),
     bCount_(),
-    numWorkerThreads_(numThreads - 1) {
-}
+    numWorkerThreads_(numThreads - 1) {}
 
-maniscalco::msufsort::~msufsort() {
-}
+msufsort::~msufsort() {}
 
-inline auto maniscalco::msufsort::get_suffix_type(
+inline auto msufsort::get_suffix_type(
     uint8_t const * suffix) -> suffix_type {
     if((suffix + 1) >= inputEnd_)
         return a;
@@ -241,7 +214,7 @@ inline auto maniscalco::msufsort::get_suffix_type(
     return b;
 }
 
-inline auto maniscalco::msufsort::get_value(
+inline auto msufsort::get_value(
     uint8_t const * inputCurrent,
     std::int32_t index) const -> suffix_value {
     inputCurrent += (index & sa_index_mask);
@@ -253,7 +226,7 @@ inline auto maniscalco::msufsort::get_value(
     return __builtin_bswap32(*(suffix_value const *)(inputCurrent));
 }
 
-inline bool maniscalco::msufsort::compare_suffixes(
+inline bool msufsort::compare_suffixes(
     // optimized compare_suffixes for when two suffixes have long common match lengths
     std::uint8_t const * inputBegin,
     std::int32_t indexA,
@@ -283,7 +256,7 @@ inline bool maniscalco::msufsort::compare_suffixes(
     return (valueA >= valueB);
 }
 
-void maniscalco::msufsort::multikey_insertion_sort(
+void msufsort::multikey_insertion_sort(
     // private:
     // sorts the suffixes by insertion sort
     std::int32_t * partitionBegin,
@@ -359,11 +332,10 @@ void maniscalco::msufsort::multikey_insertion_sort(
     }
 }
 
-inline bool maniscalco::msufsort::has_potential_tandem_repeats(
+inline bool msufsort::has_potential_tandem_repeats(
     suffix_value startingPattern,
     std::array<suffix_value, 2> endingPattern) const {
-    if(!tandemRepeatSortEnabled_)
-        return false;
+
     std::int8_t const * end = (std::int8_t const *)endingPattern.data();
     std::int8_t const * begin = end + sizeof(suffix_value);
     while(begin > end)
@@ -372,7 +344,7 @@ inline bool maniscalco::msufsort::has_potential_tandem_repeats(
     return false;
 }
 
-std::size_t maniscalco::msufsort::partition_tandem_repeats(
+std::size_t msufsort::partition_tandem_repeats(
     // private:
     // the tandem repeat sort.  determines if the suffixes provided are tandem repeats
     // of other suffixes from within the same group.  If so, sorts the non tandem
@@ -414,7 +386,7 @@ std::size_t maniscalco::msufsort::partition_tandem_repeats(
     return (parititionSize - numTerminators);
 }
 
-void maniscalco::msufsort::complete_tandem_repeats(
+void msufsort::complete_tandem_repeats(
     std::vector<tandem_repeat_info> & tandemRepeatStack) {
     while(!tandemRepeatStack.empty()) {
         tandem_repeat_info tandemRepeat = tandemRepeatStack.back();
@@ -423,7 +395,7 @@ void maniscalco::msufsort::complete_tandem_repeats(
     }
 }
 
-inline void maniscalco::msufsort::complete_tandem_repeat(
+inline void msufsort::complete_tandem_repeat(
     std::int32_t * partitionBegin,
     std::int32_t * partitionEnd,
     std::int32_t numTerminators,
@@ -497,7 +469,7 @@ inline void maniscalco::msufsort::complete_tandem_repeat(
     }
 }
 
-auto maniscalco::msufsort::multikey_quicksort(
+auto msufsort::multikey_quicksort(
     // private:
     // multi key quicksort on the input data provided
     std::int32_t * suffixArrayBegin,
@@ -650,7 +622,7 @@ auto maniscalco::msufsort::multikey_quicksort(
     return suffixArrayEnd;
 }
 
-void maniscalco::msufsort::second_stage_its_right_to_left_pass_multi_threaded(
+void msufsort::second_stage_its_right_to_left_pass_multi_threaded(
     // private:
     // induce sorted position of B suffixes from sorted B* suffixes
     // This is the first half of the second stage of the ITS ... the 'right to left' pass
@@ -782,7 +754,7 @@ void maniscalco::msufsort::second_stage_its_right_to_left_pass_multi_threaded(
     }
 }
 
-void maniscalco::msufsort::second_stage_its_right_to_left_pass_single_threaded(
+void msufsort::second_stage_its_right_to_left_pass_single_threaded(
     // private:
     // induce sorted position of B suffixes from sorted B* suffixes
     // This is the first half of the second stage of the ITS ... the 'right to left' pass
@@ -811,7 +783,7 @@ void maniscalco::msufsort::second_stage_its_right_to_left_pass_single_threaded(
     }
 }
 
-void maniscalco::msufsort::second_stage_its_left_to_right_pass_single_threaded(
+void msufsort::second_stage_its_left_to_right_pass_single_threaded(
     // private:
     // induce sorted position of A suffixes from sorted B suffixes
     // This is the second half of the second stage of the ITS ... the 'left to right' pass
@@ -838,7 +810,7 @@ void maniscalco::msufsort::second_stage_its_left_to_right_pass_single_threaded(
     }
 }
 
-void maniscalco::msufsort::second_stage_its_left_to_right_pass_multi_threaded(
+void msufsort::second_stage_its_left_to_right_pass_multi_threaded(
     // private:
     // induce sorted position of A suffixes from sorted B suffixes
     // This is the second half of the second stage of the ITS ... the 'left to right' pass
@@ -976,7 +948,7 @@ void maniscalco::msufsort::second_stage_its_left_to_right_pass_multi_threaded(
     }
 }
 
-void maniscalco::msufsort::second_stage_its(
+void msufsort::second_stage_its(
     // private:
     // performs the the second stage of the improved two stage sort.
 ) {
@@ -989,7 +961,7 @@ void maniscalco::msufsort::second_stage_its(
     }
 }
 
-void maniscalco::msufsort::count_suffixes(
+void msufsort::count_suffixes(
     uint8_t const * begin,
     uint8_t const * end,
     std::array<int32_t *, 4> count) {
@@ -1017,7 +989,7 @@ void maniscalco::msufsort::count_suffixes(
     }
 }
 
-void maniscalco::msufsort::initial_two_byte_radix_sort(
+void msufsort::initial_two_byte_radix_sort(
     uint8_t const * begin,
     uint8_t const * end,
     int32_t * bStarOffset) {
@@ -1049,7 +1021,7 @@ void maniscalco::msufsort::initial_two_byte_radix_sort(
     }
 }
 
-void maniscalco::msufsort::first_stage_its(
+void msufsort::first_stage_its(
     // private:
     // does the first stage of the improved two stage sort
 ) {
@@ -1196,14 +1168,15 @@ void maniscalco::msufsort::first_stage_its(
     suffixArrayBegin_[0] = (inputSize_ | preceding_suffix_is_type_a_flag); // sa[0] = sentinel
 }
 
-auto maniscalco::msufsort::make_suffix_array(
+void msufsort::calculate_suffix_array(
     uint8_t const * inputBegin,
-    uint8_t const * inputEnd) -> suffix_array {
+    uint8_t const * inputEnd,
+    int32_t * output
+) {
     inputBegin_ = inputBegin;
     inputEnd_ = inputEnd;
     inputSize_ = std::distance(inputBegin_, inputEnd_);
     getValueEnd_ = (inputEnd_ - sizeof(suffix_value));
-    getValueMaxIndex_ = (inputSize_ - sizeof(suffix_value));
     for(auto & e: copyEnd_)
         e = 0x00;
     auto source = inputEnd_ - sizeof(suffix_value);
@@ -1214,17 +1187,11 @@ auto maniscalco::msufsort::make_suffix_array(
         dest += n;
     }
     std::copy(source, inputEnd_, dest);
-    suffix_array suffixArray;
     auto suffixArraySize = (inputSize_ + 1);
-    suffixArray.resize(suffixArraySize);
-    for(auto & e: suffixArray)
-        e = 0;
-    suffixArrayBegin_ = suffixArray.data();
+    suffixArrayBegin_ = output;
     suffixArrayEnd_ = suffixArrayBegin_ + suffixArraySize;
     inverseSuffixArrayBegin_ = (suffixArrayBegin_ + ((inputSize_ + 1) >> 1));
-    inverseSuffixArrayEnd_ = suffixArrayEnd_;
 
     first_stage_its();
     second_stage_its();
-    return suffixArray;
 }
