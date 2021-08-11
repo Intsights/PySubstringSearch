@@ -8,7 +8,7 @@
 #include <array>
 #include <vector>
 
-#include "pysubstringsearch/src/msufsort.h"
+#include "PySubstringSearch/src/msufsort.h"
 
 class msufsort {
     public:
