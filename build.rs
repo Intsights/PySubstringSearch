@@ -1,7 +1,6 @@
 fn main() {
     cxx_build::bridge("src/lib.rs")
         .file("src/msufsort.cc")
-        .flag_if_supported("-std=c++17")
         .compile("msufsort");
 
     println!("cargo:rerun-if-changed=src/msufsort.cc");
