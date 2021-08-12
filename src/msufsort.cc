@@ -638,7 +638,7 @@ void msufsort::second_stage_its_right_to_left_pass_multi_threaded(
         uint8_t precedingSuffix_;
         int32_t precedingSuffixIndex_;
     };
-    std::unique_ptr<entry_type[]> cache[numThreads];
+    std::unique_ptr<entry_type[]> cache[numThreads] = {{0}};
     for(auto i = 0; i < numThreads; ++i)
         cache[i].reset(new entry_type[max_cache_size]);
     int32_t numSuffixes[numThreads] = {};
@@ -827,7 +827,7 @@ void msufsort::second_stage_its_left_to_right_pass_multi_threaded(
         uint8_t precedingSuffix_;
         int32_t precedingSuffixIndex_;
     };
-    std::unique_ptr<entry_type[]> cache[numThreads];
+    std::unique_ptr<entry_type[]> cache[numThreads] = {{0}};
     for(auto i = 0; i < numThreads; ++i)
         cache[i].reset(new entry_type[max_cache_size]);
     int32_t numSuffixes[numThreads] = {};
