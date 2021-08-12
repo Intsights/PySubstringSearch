@@ -8,6 +8,11 @@
 #include <array>
 #include <vector>
 
+#ifdef _WIN32
+#include <stdlib.h>
+#define __builtin_bswap32(x) _byteswap_ulong(x)
+#endif
+
 #include "pysubstringsearch/src/msufsort.h"
 
 class msufsort {
