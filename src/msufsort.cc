@@ -12,6 +12,7 @@
 #ifdef _WIN32
 #include <stdlib.h>
 #define __builtin_bswap32(x) _byteswap_ulong(x)
+#define __builtin_bswap16(x) _byteswap_ushort(x)
 #endif
 
 // #include "pysubstringsearch/src/msufsort.h"
