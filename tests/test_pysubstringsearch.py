@@ -1,5 +1,6 @@
-import unittest
+import os
 import tempfile
+import unittest
 
 import pysubstringsearch
 
@@ -14,8 +15,9 @@ class PySubstringSearchTestCase(
         expected_results,
     ):
         with tempfile.TemporaryDirectory() as tmp_directory:
+            index_file_path = f'{tmp_directory}/output.idx'
             writer = pysubstringsearch.Writer(
-                index_file_path=f'{tmp_directory}/output.idx',
+                index_file_path=index_file_path,
             )
             for string in strings:
                 writer.add_entry(
@@ -24,13 +26,17 @@ class PySubstringSearchTestCase(
             writer.finalize()
 
             reader = pysubstringsearch.Reader(
-                index_file_path=f'{tmp_directory}/output.idx',
+                index_file_path=index_file_path,
             )
             self.assertCountEqual(
                 first=reader.search(
                     substring=substring,
                 ),
                 second=expected_results,
+            )
+
+            os.unlink(
+                path=index_file_path,
             )
 
     def test_file_not_found(
