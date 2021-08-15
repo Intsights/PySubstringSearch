@@ -14,7 +14,8 @@ class PySubstringSearchTestCase(
         substring,
         expected_results,
     ):
-        with tempfile.TemporaryDirectory() as tmp_directory:
+        try:
+            tmp_directory = tempfile.TemporaryDirectory()
             index_file_path = f'{tmp_directory}/output.idx'
             writer = pysubstringsearch.Writer(
                 index_file_path=index_file_path,
@@ -34,10 +35,18 @@ class PySubstringSearchTestCase(
                 ),
                 second=expected_results,
             )
+        finally:
+            try:
+                os.unlink(
+                    path=index_file_path,
+                )
+            except Exception as exception:
+                print(exception)
 
-            os.unlink(
-                path=index_file_path,
-            )
+            try:
+                tmp_directory.cleanup()
+            except Exception as exception:
+                print(exception)
 
     def test_file_not_found(
         self,
