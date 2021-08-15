@@ -1,19 +1,20 @@
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <functional>
 #include <future>
 #include <iostream>
 #include <limits>
 #include <memory>
-#include <array>
 #include <vector>
+
 
 #ifdef _WIN32
 #include <stdlib.h>
 #define __builtin_bswap32(x) _byteswap_ulong(x)
 #endif
 
-#include "pysubstringsearch/src/msufsort.h"
+// #include "pysubstringsearch/src/msufsort.h"
 
 class msufsort {
     public:
@@ -633,17 +634,25 @@ void msufsort::second_stage_its_right_to_left_pass_multi_threaded(
     // This is the first half of the second stage of the ITS ... the 'right to left' pass
 ) {
     auto numThreads = (int32_t)(numWorkerThreads_ + 1); // +1 for main thread
+
     auto max_cache_size = (1 << 12);
     struct entry_type {
         uint8_t precedingSuffix_;
         int32_t precedingSuffixIndex_;
     };
-    std::unique_ptr<entry_type[]> cache[numThreads] = {{0}};
+    auto cache = std::vector<std::vector<entry_type>>(numThreads);
     for(auto i = 0; i < numThreads; ++i)
-        cache[i].reset(new entry_type[max_cache_size]);
-    int32_t numSuffixes[numThreads] = {};
-    int32_t sCount[numThreads][0x100] = {};
-    std::int32_t * dest[numThreads][0x100] = {};
+        cache[i] = std::vector<entry_type>(max_cache_size);
+
+    auto numSuffixes = std::vector<int32_t>(numThreads);
+
+    auto sCount = std::vector<std::vector<int32_t>>(numThreads);
+    for(auto i = 0; i < numThreads; ++i)
+        sCount[i] = std::vector<int32_t>(0x100);
+
+    auto dest = std::vector<std::vector<int32_t *>>(numThreads);
+    for(auto i = 0; i < numThreads; ++i)
+        dest[i] = std::vector<int32_t *>(0x100);
 
     auto currentSuffix = suffixArrayBegin_ + inputSize_;
     for(auto symbol = 0xff; symbol >= 0; --symbol) {
@@ -702,9 +711,9 @@ void msufsort::second_stage_its_right_to_left_pass_multi_threaded(
                         inputBegin_,
                         currentSuffix,
                         endForThisThread,
-                        cache[threadId].get(),
+                        cache[threadId].data(),
                         std::ref(numSuffixes[threadId]),
-                        sCount[threadId]));
+                        sCount[threadId].data()));
                 currentSuffix = endForThisThread;
             }
             for (auto & future: futures) {
@@ -748,9 +757,9 @@ void msufsort::second_stage_its_right_to_left_pass_multi_threaded(
                             while(++begin < end)
                                 *(--dest[begin->precedingSuffix_]) = begin->precedingSuffixIndex_;
                         },
-                        dest[threadId],
-                        cache[threadId].get(),
-                        cache[threadId].get() + numSuffixes[threadId]));
+                        dest[threadId].data(),
+                        cache[threadId].data(),
+                        cache[threadId].data() + numSuffixes[threadId]));
             for(auto & future: futures) {
                 future.wait();
             }
@@ -822,17 +831,25 @@ void msufsort::second_stage_its_left_to_right_pass_multi_threaded(
 ) {
     auto numThreads = (int32_t)(numWorkerThreads_ + 1); // +1 for main thread
     auto currentSuffix = suffixArrayBegin_;
+
     auto max_cache_size = (1 << 12);
     struct entry_type {
         uint8_t precedingSuffix_;
         int32_t precedingSuffixIndex_;
     };
-    std::unique_ptr<entry_type[]> cache[numThreads] = {{0}};
+    auto cache = std::vector<std::vector<entry_type>>(numThreads);
     for(auto i = 0; i < numThreads; ++i)
-        cache[i].reset(new entry_type[max_cache_size]);
-    int32_t numSuffixes[numThreads] = {};
-    int32_t sCount[numThreads][0x100] = {};
-    std::int32_t * dest[numThreads][0x100] = {};
+        cache[i] = std::vector<entry_type>(max_cache_size);
+
+    auto numSuffixes = std::vector<int32_t>(numThreads);
+
+    auto sCount = std::vector<std::vector<int32_t>>(numThreads);
+    for(auto i = 0; i < numThreads; ++i)
+        sCount[i] = std::vector<int32_t>(0x100);
+
+    auto dest = std::vector<std::vector<int32_t *>>(numThreads);
+    for(auto i = 0; i < numThreads; ++i)
+        dest[i] = std::vector<int32_t *>(0x100);
 
     while(currentSuffix < suffixArrayEnd_) {
         // calculate current 'safe' suffixes to process
@@ -898,9 +915,9 @@ void msufsort::second_stage_its_left_to_right_pass_multi_threaded(
                     inputBegin_,
                     begin,
                     endForThisThread,
-                    cache[threadId].get(),
+                    cache[threadId].data(),
                     std::ref(numSuffixes[threadId]),
-                    sCount[threadId]));
+                    sCount[threadId].data()));
             begin = endForThisThread;
         }
         for(auto & future: futures) {
@@ -944,9 +961,9 @@ void msufsort::second_stage_its_left_to_right_pass_multi_threaded(
                         while(++begin != end)
                             *(dest[begin->precedingSuffix_]++) = begin->precedingSuffixIndex_;
                     },
-                    dest[threadId],
-                    cache[threadId].get(),
-                    cache[threadId].get() + numSuffixes[threadId]));
+                    dest[threadId].data(),
+                    cache[threadId].data(),
+                    cache[threadId].data() + numSuffixes[threadId]));
         for(auto & future: futures) {
             future.wait();
         }
@@ -1111,7 +1128,7 @@ void msufsort::first_stage_its(
 
     // multikey quicksort on B* parititions
     std::atomic<std::int32_t> partitionCount(numPartitions);
-    std::vector<tandem_repeat_info> tandemRepeatStack[numThreads];
+    auto tandemRepeatStack = std::vector<std::vector<tandem_repeat_info>>(numThreads);
     // sort the partitions by size to ensure that the largest partitinos are not sorted last.
     // this prevents the case where the last thread is assigned a large thread while all other
     // threads exit due to no more partitions to sort.
