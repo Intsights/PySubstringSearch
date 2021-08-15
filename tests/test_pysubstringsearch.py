@@ -15,38 +15,35 @@ class PySubstringSearchTestCase(
         expected_results,
     ):
         try:
-            tmp_directory = tempfile.TemporaryDirectory()
-            index_file_path = f'{tmp_directory}/output.idx'
-            writer = pysubstringsearch.Writer(
-                index_file_path=index_file_path,
-            )
-            for string in strings:
-                writer.add_entry(
-                    text=string,
+            with tempfile.TemporaryDirectory() as tmp_directory:
+                index_file_path = f'{tmp_directory}/output.idx'
+                writer = pysubstringsearch.Writer(
+                    index_file_path=index_file_path,
                 )
-            writer.finalize()
+                for string in strings:
+                    writer.add_entry(
+                        text=string,
+                    )
+                writer.finalize()
 
-            reader = pysubstringsearch.Reader(
-                index_file_path=index_file_path,
-            )
-            self.assertCountEqual(
-                first=reader.search(
-                    substring=substring,
-                ),
-                second=expected_results,
-            )
-        finally:
-            try:
-                os.unlink(
-                    path=index_file_path,
+                reader = pysubstringsearch.Reader(
+                    index_file_path=index_file_path,
                 )
-            except Exception as exception:
-                print(exception)
+                self.assertCountEqual(
+                    first=reader.search(
+                        substring=substring,
+                    ),
+                    second=expected_results,
+                )
 
-            try:
-                tmp_directory.cleanup()
-            except Exception as exception:
-                print(exception)
+                try:
+                    os.unlink(
+                        path=index_file_path,
+                    )
+                except Exception:
+                    pass
+        except PermissionError:
+            pass
 
     def test_file_not_found(
         self,
