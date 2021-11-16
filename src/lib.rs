@@ -48,23 +48,19 @@ impl Writer {
         )
     }
 
-    #[staticmethod]
-    fn from_file_lines(
+    fn add_entries_from_file_lines(
+        &mut self,
         input_file_path: &str,
-        index_file_path: &str,
-        max_chunk_len: Option<usize>,
     ) -> PyResult<()> {
-        let mut writer = Writer::new(index_file_path, max_chunk_len)?;
-
         let input_file = File::open(input_file_path)?;
         let input_file_reader = BufReader::new(input_file);
         input_file_reader.for_byte_line(
             |line| {
-                if writer.buffer.len() + line.len() + 1 > writer.max_chunk_len {
-                    writer.dump_data()?;
+                if self.buffer.len() + line.len() + 1 > self.max_chunk_len {
+                    self.dump_data()?;
                 }
-                writer.buffer.extend_from_slice(line);
-                writer.buffer.push(b'\n');
+                self.buffer.extend_from_slice(line);
+                self.buffer.push(b'\n');
 
                 Ok(true)
             }
