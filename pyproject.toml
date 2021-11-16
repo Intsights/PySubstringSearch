@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin"]
+requires = ["maturin>=0.11,<0.12"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -9,8 +9,6 @@ sdist-include = [
     "pysubstringsearch/*.py",
     "pysubstringsearch/*.pyi"
 ]
-manylinux = "2014"
-strip = true
 
 [tool.poetry]
 name = "pysubstringsearch"
@@ -35,10 +33,10 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Rust",
 ]
 

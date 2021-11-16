@@ -226,3 +226,17 @@ class PySubstringSearchTestCase(
                 'some short string',
             ],
         )
+
+    def test_short_string(
+        self,
+    ):
+        strings = [
+            'ab',
+        ]
+        self.assert_substring_search(
+            strings=strings,
+            substring='a',
+            expected_results=[
+                'ab',
+            ],
+        )
