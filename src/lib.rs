@@ -24,7 +24,6 @@ mod ffi {
 struct Writer {
     index_file: Builder<File>,
     buffer: Vec<u8>,
-    max_chunk_len: usize,
     number_of_index_files: usize,
 }
 
@@ -42,7 +41,6 @@ impl Writer {
             Writer {
                 index_file: Builder::new(index_file),
                 buffer: Vec::with_capacity(max_chunk_len),
-                max_chunk_len,
                 number_of_index_files: 0,
             }
         )
@@ -56,7 +54,7 @@ impl Writer {
         let input_file_reader = BufReader::new(input_file);
         input_file_reader.for_byte_line(
             |line| {
-                if self.buffer.len() + line.len() + 1 > self.max_chunk_len {
+                if self.buffer.len() + line.len() + 1 > self.buffer.capacity() {
                     self.dump_data()?;
                 }
                 self.buffer.extend_from_slice(line);
@@ -73,11 +71,11 @@ impl Writer {
         &mut self,
         text: &str,
     ) -> PyResult<()> {
-        if text.len() > self.max_chunk_len {
+        if text.len() > self.buffer.capacity() {
             return Err(exceptions::PyValueError::new_err("entry is too big"));
         }
 
-        if self.buffer.len() + text.len() + 1 > self.max_chunk_len {
+        if self.buffer.len() + text.len() + 1 > self.buffer.capacity() {
             self.dump_data()?;
         }
         self.buffer.extend_from_slice(text.as_bytes());
@@ -168,10 +166,10 @@ impl Reader {
     fn new(
         index_file_path: &str,
     ) -> PyResult<Self> {
-        let mut sub_indexes = Vec::new();
 
         let mut archive_file = Archive::new(File::open(index_file_path)?);
         let number_of_files = archive_file.count_entries()? / 2;
+        let mut sub_indexes = Vec::with_capacity(number_of_files);
 
         for i in 0..number_of_files {
             let mut archive_file = Archive::new(File::open(index_file_path)?);

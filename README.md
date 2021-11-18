@@ -82,6 +82,9 @@ writer.add_entry('some short string')
 writer.add_entry('another but now a longer string')
 writer.add_entry('more text to add')
 
+# adding entries from file lines
+writer.add_entries_from_file_lines('input_file.txt')
+
 # making sure the data is dumped to the file
 writer.finalize()
 ```

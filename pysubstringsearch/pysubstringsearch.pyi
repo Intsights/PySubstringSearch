@@ -8,11 +8,9 @@ class Writer:
         max_chunk_len: typing.Optional[int],
     ) -> None: ...
 
-    def from_file_lines(
+    def add_entries_from_file_lines(
         self,
         input_file_path: str,
-        index_file_path: str,
-        max_chunk_len: typing.Optional[int],
     ) -> None: ...
 
     def add_entry(
