@@ -44,16 +44,16 @@ The module implements a method for searching.
 #### 500MB File
 | Library | Function | Time | #Results | Improvement Factor |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_one', '500mb').run().as_string.split('\n') | 148ms | 2367 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_one') | 1.28ms | 2367 | 115.6x |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('google', '500mb').run().as_string.split('\n') | 64ms | 5943 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 1.28ms | 2367 | 115.6x |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '500mb').run().as_string.split('\n') | 116ms | 159 | 1.0x |
 | [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 228µs | 159 | 508.7x |
 
 #### 6000MB File
 | Library | Function | Time | #Results | Improvement Factor |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_one', '6000mb').run().as_string.split('\n') | 2.4s | 59538 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_one') | 15.4ms | 59538 | 155.8x |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('google', '6000mb').run().as_string.split('\n') | 2.4s | 59538 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 15.4ms | 59538 | 155.8x |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '6000mb').run().as_string.split('\n') | 1.5s | 7266 | 1.0x |
 | [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 1.97ms | 7266 | 761.4x |
 

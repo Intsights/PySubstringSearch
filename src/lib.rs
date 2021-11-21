@@ -1,13 +1,15 @@
+use ahash::AHashSet;
 use ar::{Builder, Archive, Header};
-use bstr::ByteSlice;
 use bstr::io::BufReadExt;
 use byteorder::{ReadBytesExt, LittleEndian};
+use memchr::memmem;
+use parking_lot::Mutex;
 use pyo3::exceptions;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[cxx::bridge]
 mod ffi {
@@ -207,12 +209,7 @@ impl Reader {
                     suffixes_file.seek(SeekFrom::Start(middle_anchor as u64)).unwrap();
                     let data_index = suffixes_file.read_i32::<LittleEndian>().unwrap();
 
-                    let newline_position = match sub_index.data[data_index as usize..].find(b"\n") {
-                        Some(newline_position) => data_index as usize + newline_position,
-                        None => sub_index.data.len() - 1,
-                    };
-                    let line = &sub_index.data[data_index as usize..newline_position];
-
+                    let line = &sub_index.data[data_index as usize..];
                     if line.starts_with(substring.as_bytes()) {
                         current_suffix_array_index = Some(middle_anchor);
                         right_anchor = middle_anchor - 4;
@@ -220,36 +217,33 @@ impl Reader {
                         match substring.as_bytes().cmp(line) {
                             std::cmp::Ordering::Less => right_anchor = middle_anchor - 4,
                             std::cmp::Ordering::Greater => left_anchor = middle_anchor + 4,
-                            std::cmp::Ordering::Equal => {
-                                current_suffix_array_index = Some(middle_anchor);
-                                right_anchor = middle_anchor - 4;
-                            },
+                            std::cmp::Ordering::Equal => {},
                         };
                     }
                 }
 
-                let mut matches_ranges = Vec::new();
+                let mut matches_ranges = AHashSet::new();
                 if let Some(current_index) = current_suffix_array_index {
                     let mut current_index = current_index;
                     let suffixes_file_len = suffixes_file.seek(SeekFrom::End(0)).unwrap() as usize;
                     loop {
                         suffixes_file.seek(SeekFrom::Start(current_index as u64)).unwrap();
                         let data_index = suffixes_file.read_i32::<LittleEndian>().unwrap();
-                        let line_head = match sub_index.data[data_index as usize..].find(b"\n") {
+                        if !sub_index.data[data_index as usize..].starts_with(substring.as_bytes()) {
+                            break;
+                        }
+
+                        let line_head = match memmem::find(&sub_index.data[data_index as usize..], b"\n") {
                             Some(next_nl_pos) => data_index as usize + next_nl_pos,
                             None => sub_index.data.len() - 1,
                         };
-                        let line_tail = match sub_index.data[..data_index as usize].rfind(b"\n") {
+                        let line_tail = match memmem::rfind(&sub_index.data[..data_index as usize], b"\n") {
                             Some(previous_nl_pos) => previous_nl_pos + 1,
                             None => 0,
                         };
                         let line = &sub_index.data[line_tail..line_head];
-                        if !line.contains_str(substring.as_bytes()) {
-                            break;
-                        }
-                        if !matches_ranges.contains(&(line_tail, line_head)) {
-                            results.lock().unwrap().push(line.to_str_lossy().to_string());
-                            matches_ranges.push((line_tail, line_head));
+                        if matches_ranges.insert(line_tail) {
+                            results.lock().push(String::from_utf8_lossy(line).into_owned());
                         }
                         current_index += 4;
                         if current_index >= suffixes_file_len {
@@ -260,7 +254,7 @@ impl Reader {
             }
         );
 
-        let results = results.lock().unwrap().to_vec();
+        let results = results.lock().to_vec();
 
         Ok(results)
     }

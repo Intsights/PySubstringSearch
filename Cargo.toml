@@ -38,10 +38,13 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ar = "0.9"
-cxx = "1.0"
 bstr = "0.2"
 byteorder = "1"
+cxx = "1.0"
+parking_lot = "0.11"
 rayon = "1"
+ahash = "0.7"
+memchr = "2"
 
 [dependencies.pyo3]
 version = "0.15.0"
@@ -53,3 +56,4 @@ cxx-build = "1.0"
 [profile.release]
 lto = true
 panic = "abort"
+# debug = 1
