@@ -6,7 +6,6 @@ fn main() {
     ];
     let mut builder = cc::Build::new();
     let build = builder
-        .files(src.iter())
-        .flag("-Wno-unused-parameter");
+        .files(src.iter());
     build.compile("libsais");
 }
