@@ -11,14 +11,39 @@ use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::sync::Arc;
 
-#[cxx::bridge]
-mod ffi {
-    unsafe extern "C++" {
-        include!("pysubstringsearch/src/msufsort.h");
-        unsafe fn calculate_suffix_array(
-            input: &[u8],
-            output: &mut [i32]
+extern "C" {
+    #[doc = " Constructs the suffix array of a given string."]
+    #[doc = " @param T [0..n-1] The input string."]
+    #[doc = " @param SA [0..n-1+fs] The output array of suffixes."]
+    #[doc = " @param n The length of the given string."]
+    #[doc = " @param fs The extra space available at the end of SA array (can be 0)."]
+    #[doc = " @param freq [0..255] The output symbol frequency table (can be NULL)."]
+    #[doc = " @return 0 if no error occurred, -1 or -2 otherwise."]
+    pub fn libsais(
+        T: *const u8,
+        SA: *mut i32,
+        n: i32,
+        fs: i32,
+        freq: *mut i32,
+    ) -> i32;
+}
+
+fn construct_suffix_array(
+    buffer: &[u8],
+) -> Vec<i32> {
+    unsafe {
+        let mut suffix_array: Vec<i32> = Vec::with_capacity(buffer.len());
+        suffix_array.set_len(buffer.len());
+
+        libsais(
+            buffer.as_ptr(),
+            suffix_array.as_mut_ptr(),
+            buffer.len() as i32,
+            0i32,
+            std::ptr::null_mut::<i32>(),
         );
+
+        suffix_array
     }
 }
 
@@ -103,28 +128,21 @@ impl Writer {
         )?;
 
 
-        let mut suffix_array: Vec<i32> = Vec::with_capacity(self.buffer.len() + 1);
-        unsafe {
-            suffix_array.set_len(self.buffer.len() + 1);
-            ffi::calculate_suffix_array(
-                self.buffer.as_slice(),
-                suffix_array.as_mut_slice(),
-            );
-        }
+        let suffix_array = construct_suffix_array(&self.buffer);
 
         let suffix_file_name = format!("suffix_array_{}", self.number_of_index_files);
-        unsafe {
-            self.index_file.append(
-                &Header::new(
-                    suffix_file_name.as_bytes().to_vec(),
-                    ((self.buffer.len() + 1) * std::mem::size_of::<i32>()) as u64,
-                ),
+        self.index_file.append(
+            &Header::new(
+                suffix_file_name.as_bytes().to_vec(),
+                (suffix_array.len() * std::mem::size_of::<i32>()) as u64,
+            ),
+            unsafe {
                 std::slice::from_raw_parts(
                     suffix_array.as_ptr() as *const u8,
                     suffix_array.len() * std::mem::size_of::<i32>(),
-                ),
-            )?;
-        }
+                )
+            },
+        )?;
 
         self.number_of_index_files += 1;
         self.buffer.clear();
@@ -175,14 +193,13 @@ impl Reader {
 
         for i in 0..number_of_files {
             let mut archive_file = Archive::new(File::open(index_file_path)?);
-            let mut data_file = archive_file.jump_to_entry(i * 2)?;
             let mut data = Vec::new();
-            data_file.read_to_end(&mut data)?;
+            archive_file.jump_to_entry(i * 2)?.read_to_end(&mut data)?;
 
             sub_indexes.push(
                 SubIndex {
                     data,
-                    archive_file: Archive::new(File::open(index_file_path)?),
+                    archive_file,
                     suffixes_file_index: i + 1,
                 }
             );
@@ -202,6 +219,7 @@ impl Reader {
                 let mut current_suffix_array_index = None;
 
                 let mut suffixes_file = sub_index.archive_file.jump_to_entry(sub_index.suffixes_file_index).unwrap();
+
                 let mut left_anchor: usize = 0;
                 let mut right_anchor: usize = suffixes_file.header().size() as usize;
                 while left_anchor <= right_anchor {

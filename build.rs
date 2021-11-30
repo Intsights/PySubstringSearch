@@ -1,9 +1,12 @@
 fn main() {
-    cxx_build::bridge("src/lib.rs")
-        .file("src/msufsort.cc")
-        .flag_if_supported("-std=c++17")
-        .compile("msufsort");
+    println!("cargo:rerun-if-changed=libsais.c");
 
-    println!("cargo:rerun-if-changed=src/msufsort.cc");
-    println!("cargo:rerun-if-changed=src/msufsort.h");
+    let src = [
+        "src/libsais/libsais.c",
+    ];
+    let mut builder = cc::Build::new();
+    let build = builder
+        .files(src.iter())
+        .flag("-Wno-unused-parameter");
+    build.compile("libsais");
 }

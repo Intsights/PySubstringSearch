@@ -28,7 +28,7 @@
 
 ## About The Project
 
-PySubstringSearch is a library designed to search over an index file for substring patterns. In order to achieve speed and efficiency, the library is written in Rust. For string indexing, the library uses [Msufsort](https://github.com/michaelmaniscalco/msufsort) suffix array construction library. The index created consists of the original text and a 32bit suffix array struct. To get around the limitations of the Suffix Array Construction implementation, the library uses a proprietary container protocol to hold the original text and index in chunks of 512MB.
+PySubstringSearch is a library designed to search over an index file for substring patterns. In order to achieve speed and efficiency, the library is written in Rust. For string indexing, the library uses [libsais](https://github.com/IlyaGrebnov/libsais) suffix array construction library. The index created consists of the original text and a 32bit suffix array struct. To get around the limitations of the Suffix Array Construction implementation, the library uses a proprietary container protocol to hold the original text and index in chunks of 512MB.
 
 The module implements a method for searching.
 - `search` - Find different entries with the same substring concurrently. Concurrency increases as the index file grows in size with multiple inner chunks.
@@ -36,7 +36,7 @@ The module implements a method for searching.
 
 ### Built With
 
-* [Msufsort](https://github.com/michaelmaniscalco/msufsort)
+* [libsais](https://github.com/IlyaGrebnov/libsais)
 
 
 ### Performance
@@ -45,7 +45,7 @@ The module implements a method for searching.
 | Library | Function | Time | #Results | Improvement Factor |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('google', '500mb').run().as_string.split('\n') | 64ms | 5943 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 1.28ms | 2367 | 115.6x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 1.28ms | 5943 | 115.6x |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '500mb').run().as_string.split('\n') | 116ms | 159 | 1.0x |
 | [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 228µs | 159 | 508.7x |
 
