@@ -25,4 +25,4 @@ jobs:
         with:
           maturin-version: latest
           command: publish
-          args: --username __token__ --no-sdist --interpreter python${{ matrix.python-version }
+          args: --username __token__ --no-sdist --interpreter python${{ matrix.python-version }}
