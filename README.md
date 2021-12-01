@@ -45,9 +45,9 @@ The module implements a method for searching.
 | Library | Function | Time | #Results | Improvement Factor |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('google', '500mb').run().as_string.split('\n') | 47.2ms | 5943 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 1.22ms | 5943 | 38.7x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 497µs | 5943 | 95x |
 | [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '500mb').run().as_string.split('\n') | 44.7ms | 159 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 9.5µs | 159 | 4968x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 14.9µs | 159 | 3000x |
 
 #### 7500MB File
 | Library | Function | Time | #Results | Improvement Factor |

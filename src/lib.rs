@@ -8,8 +8,8 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
-use std::sync::Arc;
 use std::str;
+use std::sync::Arc;
 
 extern "C" {
     pub fn libsais(

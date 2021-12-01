@@ -1,7 +1,5 @@
 name: Deploy
-on:
-  release:
-    types: [released]
+on: [push, pull_request]
 jobs:
   deploy:
     runs-on: ${{ matrix.os }}
@@ -23,16 +21,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Install maturin
-        run: |
-          python -m pip install --upgrade pip maturin
-      - name: Build & Publish to PyPi
-        if: matrix.os != 'windows-latest'
-        run: maturin publish --username __token__ --no-sdist --interpreter python${{ matrix.python-version }} --manylinux=2014
-        env:
-          MATURIN_PASSWORD: ${{ secrets.pypi_password }}
-      - name: Build & Publish to PyPi
-        if: matrix.os == 'windows-latest'
-        run: maturin publish --username=__token__ --no-sdist --interpreter=python --manylinux=2014
-        env:
-          MATURIN_PASSWORD: ${{ secrets.pypi_password }}
+      - uses: messense/maturin-action@v1
+        with:
+          maturin-version: latest
+          command: publish
+          args: --username __token__ --no-sdist
