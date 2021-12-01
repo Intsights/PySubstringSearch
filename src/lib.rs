@@ -12,19 +12,12 @@ use std::sync::Arc;
 use std::str;
 
 extern "C" {
-    #[doc = " Constructs the suffix array of a given string."]
-    #[doc = " @param T [0..n-1] The input string."]
-    #[doc = " @param SA [0..n-1+fs] The output array of suffixes."]
-    #[doc = " @param n The length of the given string."]
-    #[doc = " @param fs The extra space available at the end of SA array (can be 0)."]
-    #[doc = " @param freq [0..255] The output symbol frequency table (can be NULL)."]
-    #[doc = " @return 0 if no error occurred, -1 or -2 otherwise."]
     pub fn libsais(
-        T: *const u8,
-        SA: *mut i32,
-        n: i32,
-        fs: i32,
-        freq: *mut i32,
+        data: *const u8,
+        suffix_array: *mut i32,
+        data_len: i32,
+        suffix_array_extra_space: i32,
+        symbol_frequency_table: *mut i32,
     ) -> i32;
 }
 
@@ -39,7 +32,7 @@ fn construct_suffix_array(
             buffer.as_ptr(),
             suffix_array.as_mut_ptr(),
             buffer.len() as i32,
-            0i32,
+            0,
             std::ptr::null_mut::<i32>(),
         );
 
@@ -154,8 +147,8 @@ impl Drop for Writer {
 struct SubIndex {
     data: Vec<u8>,
     index_file: BufReader<File>,
-    suffixes_file_offset: usize,
-    suffixes_file_len: usize,
+    suffixes_file_start: usize,
+    suffixes_file_end: usize,
     finder: memmem::Finder<'static>,
     finder_rev: memmem::FinderRev<'static>,
 }
@@ -186,7 +179,8 @@ impl Reader {
             index_file.read_exact(&mut data)?;
 
             let suffixes_file_len = index_file.read_u32::<LittleEndian>()? as usize;
-            let suffixes_file_offset = index_file.seek(SeekFrom::Current(0))? as usize;
+            let suffixes_file_start = index_file.seek(SeekFrom::Current(0))? as usize;
+            let suffixes_file_end = suffixes_file_start + suffixes_file_len;
             index_file.seek(SeekFrom::Current(suffixes_file_len as i64))?;
 
             bytes_read += 4 + 4 + data_file_len as u64 + suffixes_file_len as u64;
@@ -195,8 +189,8 @@ impl Reader {
                 SubIndex {
                     data,
                     index_file: BufReader::new(File::open(index_file_path)?),
-                    suffixes_file_offset,
-                    suffixes_file_len,
+                    suffixes_file_start,
+                    suffixes_file_end,
                     finder: memmem::Finder::new(b"\n"),
                     finder_rev: memmem::FinderRev::new(b"\n"),
                 }
@@ -217,8 +211,8 @@ impl Reader {
                 let mut start_of_indices = None;
                 let mut end_of_indices = None;
 
-                let mut left_anchor = sub_index.suffixes_file_offset;
-                let mut right_anchor = sub_index.suffixes_file_offset + sub_index.suffixes_file_len - 4;
+                let mut left_anchor = sub_index.suffixes_file_start;
+                let mut right_anchor = sub_index.suffixes_file_end - 4;
                 while left_anchor <= right_anchor {
                     let middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
                     sub_index.index_file.seek(SeekFrom::Start(middle_anchor as u64)).unwrap();
@@ -240,7 +234,7 @@ impl Reader {
                     return;
                 }
 
-                let mut right_anchor = sub_index.suffixes_file_offset + sub_index.suffixes_file_len - 4;
+                let mut right_anchor = sub_index.suffixes_file_end - 4;
                 while left_anchor <= right_anchor {
                     let middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
                     sub_index.index_file.seek(SeekFrom::Start(middle_anchor as u64)).unwrap();
