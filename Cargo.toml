@@ -37,14 +37,12 @@ name = "pysubstringsearch"
 crate-type = ["cdylib"]
 
 [dependencies]
-ar = "0.9"
+ahash = "0.7"
 bstr = "0.2"
 byteorder = "1"
-cxx = "1.0"
+memchr = "2"
 parking_lot = "0.11"
 rayon = "1"
-ahash = "0.7"
-memchr = "2"
 
 [dependencies.pyo3]
 version = "0.15.1"

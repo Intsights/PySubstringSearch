@@ -1,15 +1,15 @@
 use ahash::AHashSet;
-use ar::{Builder, Archive, Header};
 use bstr::io::BufReadExt;
-use byteorder::{ReadBytesExt, LittleEndian};
+use byteorder::{ReadBytesExt, WriteBytesExt, ByteOrder, LittleEndian};
 use memchr::memmem;
 use parking_lot::Mutex;
 use pyo3::exceptions;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::fs::File;
-use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::sync::Arc;
+use std::str;
 
 extern "C" {
     #[doc = " Constructs the suffix array of a given string."]
@@ -49,9 +49,8 @@ fn construct_suffix_array(
 
 #[pyclass]
 struct Writer {
-    index_file: Builder<File>,
+    index_file: BufWriter<File>,
     buffer: Vec<u8>,
-    number_of_index_files: usize,
 }
 
 #[pymethods]
@@ -62,13 +61,13 @@ impl Writer {
         max_chunk_len: Option<usize>,
     ) -> PyResult<Self> {
         let index_file = File::create(index_file_path)?;
+        let index_file = BufWriter::new(index_file);
         let max_chunk_len = max_chunk_len.unwrap_or(512 * 1024 * 1024);
 
         Ok(
             Writer {
-                index_file: Builder::new(index_file),
+                index_file,
                 buffer: Vec::with_capacity(max_chunk_len),
-                number_of_index_files: 0,
             }
         )
     }
@@ -118,33 +117,15 @@ impl Writer {
             return Ok(());
         }
 
-        let text_file_name = format!("text_{}", self.number_of_index_files);
-        self.index_file.append(
-            &Header::new(
-                text_file_name.as_bytes().to_vec(),
-                self.buffer.len() as u64,
-            ),
-            self.buffer.as_slice(),
-        )?;
-
+        self.index_file.write_u32::<LittleEndian>(self.buffer.len() as u32)?;
+        self.index_file.write_all(&self.buffer)?;
 
         let suffix_array = construct_suffix_array(&self.buffer);
+        self.index_file.write_u32::<LittleEndian>((suffix_array.len() * 4) as u32)?;
+        for suffix in suffix_array {
+            self.index_file.write_i32::<LittleEndian>(suffix)?;
+        }
 
-        let suffix_file_name = format!("suffix_array_{}", self.number_of_index_files);
-        self.index_file.append(
-            &Header::new(
-                suffix_file_name.as_bytes().to_vec(),
-                (suffix_array.len() * std::mem::size_of::<i32>()) as u64,
-            ),
-            unsafe {
-                std::slice::from_raw_parts(
-                    suffix_array.as_ptr() as *const u8,
-                    suffix_array.len() * std::mem::size_of::<i32>(),
-                )
-            },
-        )?;
-
-        self.number_of_index_files += 1;
         self.buffer.clear();
 
         Ok(())
@@ -156,6 +137,7 @@ impl Writer {
         if !self.buffer.is_empty() {
             self.dump_data()?;
         }
+        self.index_file.flush()?;
 
         Ok(())
     }
@@ -171,8 +153,11 @@ impl Drop for Writer {
 
 struct SubIndex {
     data: Vec<u8>,
-    archive_file: Archive<File>,
-    suffixes_file_index: usize,
+    index_file: BufReader<File>,
+    suffixes_file_offset: usize,
+    suffixes_file_len: usize,
+    finder: memmem::Finder<'static>,
+    finder_rev: memmem::FinderRev<'static>,
 }
 
 #[pyclass]
@@ -186,21 +171,34 @@ impl Reader {
     fn new(
         index_file_path: &str,
     ) -> PyResult<Self> {
+        let index_file = File::open(index_file_path)?;
+        let mut index_file = BufReader::new(index_file);
+        let index_file_metadata = std::fs::metadata(index_file_path)?;
+        let index_file_len = index_file_metadata.len();
+        let mut bytes_read = 0;
 
-        let mut archive_file = Archive::new(File::open(index_file_path)?);
-        let number_of_files = archive_file.count_entries()? / 2;
-        let mut sub_indexes = Vec::with_capacity(number_of_files);
+        let mut sub_indexes = Vec::new();
 
-        for i in 0..number_of_files {
-            let mut archive_file = Archive::new(File::open(index_file_path)?);
-            let mut data = Vec::new();
-            archive_file.jump_to_entry(i * 2)?.read_to_end(&mut data)?;
+        while bytes_read < index_file_len {
+            let data_file_len = index_file.read_u32::<LittleEndian>()?;
+            let mut data = Vec::with_capacity(data_file_len as usize);
+            unsafe { data.set_len(data_file_len as usize) };
+            index_file.read_exact(&mut data)?;
+
+            let suffixes_file_len = index_file.read_u32::<LittleEndian>()? as usize;
+            let suffixes_file_offset = index_file.seek(SeekFrom::Current(0))? as usize;
+            index_file.seek(SeekFrom::Current(suffixes_file_len as i64))?;
+
+            bytes_read += 4 + 4 + data_file_len as u64 + suffixes_file_len as u64;
 
             sub_indexes.push(
                 SubIndex {
                     data,
-                    archive_file,
-                    suffixes_file_index: i + 1,
+                    index_file: BufReader::new(File::open(index_file_path)?),
+                    suffixes_file_offset,
+                    suffixes_file_len,
+                    finder: memmem::Finder::new(b"\n"),
+                    finder_rev: memmem::FinderRev::new(b"\n"),
                 }
             );
         }
@@ -211,25 +209,24 @@ impl Reader {
     fn search(
         &mut self,
         substring: &str,
-    ) -> PyResult<Vec<String>> {
+    ) -> PyResult<Vec<&str>> {
         let results = Arc::new(Mutex::new(Vec::new()));
 
         self.sub_indexes.par_iter_mut().for_each(
             |sub_index| {
-                let mut current_suffix_array_index = None;
+                let mut start_of_indices = None;
+                let mut end_of_indices = None;
 
-                let mut suffixes_file = sub_index.archive_file.jump_to_entry(sub_index.suffixes_file_index).unwrap();
-
-                let mut left_anchor: usize = 0;
-                let mut right_anchor: usize = suffixes_file.header().size() as usize;
+                let mut left_anchor = sub_index.suffixes_file_offset;
+                let mut right_anchor = sub_index.suffixes_file_offset + sub_index.suffixes_file_len - 4;
                 while left_anchor <= right_anchor {
                     let middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
-                    suffixes_file.seek(SeekFrom::Start(middle_anchor as u64)).unwrap();
-                    let data_index = suffixes_file.read_i32::<LittleEndian>().unwrap();
+                    sub_index.index_file.seek(SeekFrom::Start(middle_anchor as u64)).unwrap();
+                    let data_index = sub_index.index_file.read_i32::<LittleEndian>().unwrap();
 
                     let line = &sub_index.data[data_index as usize..];
                     if line.starts_with(substring.as_bytes()) {
-                        current_suffix_array_index = Some(middle_anchor);
+                        start_of_indices = Some(middle_anchor);
                         right_anchor = middle_anchor - 4;
                     } else {
                         match substring.as_bytes().cmp(line) {
@@ -239,36 +236,57 @@ impl Reader {
                         };
                     }
                 }
+                if start_of_indices.is_none() {
+                    return;
+                }
 
-                let mut matches_ranges = AHashSet::new();
-                if let Some(current_index) = current_suffix_array_index {
-                    let mut current_index = current_index;
-                    let suffixes_file_len = suffixes_file.seek(SeekFrom::End(0)).unwrap() as usize;
-                    loop {
-                        suffixes_file.seek(SeekFrom::Start(current_index as u64)).unwrap();
-                        let data_index = suffixes_file.read_i32::<LittleEndian>().unwrap();
-                        if !sub_index.data[data_index as usize..].starts_with(substring.as_bytes()) {
-                            break;
-                        }
+                let mut right_anchor = sub_index.suffixes_file_offset + sub_index.suffixes_file_len - 4;
+                while left_anchor <= right_anchor {
+                    let middle_anchor = left_anchor + ((right_anchor - left_anchor) / 4 / 2 * 4);
+                    sub_index.index_file.seek(SeekFrom::Start(middle_anchor as u64)).unwrap();
+                    let data_index = sub_index.index_file.read_i32::<LittleEndian>().unwrap();
 
-                        let line_head = match memmem::find(&sub_index.data[data_index as usize..], b"\n") {
-                            Some(next_nl_pos) => data_index as usize + next_nl_pos,
-                            None => sub_index.data.len() - 1,
+                    let line = &sub_index.data[data_index as usize..];
+                    if line.starts_with(substring.as_bytes()) {
+                        end_of_indices = Some(middle_anchor);
+                        left_anchor = middle_anchor + 4;
+                    } else {
+                        match substring.as_bytes().cmp(line) {
+                            std::cmp::Ordering::Less => right_anchor = middle_anchor - 4,
+                            std::cmp::Ordering::Greater => left_anchor = middle_anchor + 4,
+                            std::cmp::Ordering::Equal => {},
                         };
-                        let line_tail = match memmem::rfind(&sub_index.data[..data_index as usize], b"\n") {
-                            Some(previous_nl_pos) => previous_nl_pos + 1,
-                            None => 0,
-                        };
-                        let line = &sub_index.data[line_tail..line_head];
-                        if matches_ranges.insert(line_tail) {
-                            results.lock().push(String::from_utf8_lossy(line).into_owned());
-                        }
-                        current_index += 4;
-                        if current_index >= suffixes_file_len {
-                            break;
-                        }
                     }
                 }
+
+                let start_of_indices = start_of_indices.unwrap();
+                let end_of_indices = end_of_indices.unwrap();
+
+                let mut suffixes = Vec::with_capacity(end_of_indices - start_of_indices + 4);
+                unsafe { suffixes.set_len(end_of_indices - start_of_indices + 4) };
+
+                sub_index.index_file.seek(SeekFrom::Start(start_of_indices as u64)).unwrap();
+                sub_index.index_file.read_exact(&mut suffixes).unwrap();
+
+                let mut matches_ranges = AHashSet::new();
+                let mut local_results = Vec::with_capacity((end_of_indices - start_of_indices + 4) / 4);
+                for suffix in suffixes.chunks_mut(4) {
+                    let data_index = LittleEndian::read_i32(suffix);
+                    let line_head = match sub_index.finder.find(&sub_index.data[data_index as usize..]) {
+                        Some(next_nl_pos) => data_index as usize + next_nl_pos,
+                        None => sub_index.data.len() - 1,
+                    };
+                    let line_tail = match sub_index.finder_rev.rfind(&sub_index.data[..data_index as usize]) {
+                        Some(previous_nl_pos) => previous_nl_pos + 1,
+                        None => 0,
+                    };
+                    if matches_ranges.insert(line_tail) {
+                        let line = unsafe { str::from_utf8_unchecked(&sub_index.data[line_tail..line_head]) };
+                        local_results.push(line);
+                    }
+                }
+
+                results.lock().extend(local_results);
             }
         );
 

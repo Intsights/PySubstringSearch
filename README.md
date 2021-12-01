@@ -19,7 +19,7 @@
   - [Built With](#built-with)
   - [Performance](#performance)
     - [500MB File](#500mb-file)
-    - [6000MB File](#6000mb-file)
+    - [7500MB File](#7500mb-file)
   - [Installation](#installation)
 - [Usage](#usage)
 - [License](#license)
@@ -44,18 +44,18 @@ The module implements a method for searching.
 #### 500MB File
 | Library | Function | Time | #Results | Improvement Factor |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('google', '500mb').run().as_string.split('\n') | 64ms | 5943 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 1.28ms | 5943 | 115.6x |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '500mb').run().as_string.split('\n') | 116ms | 159 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 228µs | 159 | 508.7x |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('google', '500mb').run().as_string.split('\n') | 47.2ms | 5943 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 1.22ms | 5943 | 38.7x |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '500mb').run().as_string.split('\n') | 44.7ms | 159 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 9.5µs | 159 | 4968x |
 
-#### 6000MB File
+#### 7500MB File
 | Library | Function | Time | #Results | Improvement Factor |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('google', '6000mb').run().as_string.split('\n') | 2.4s | 59538 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 15.4ms | 59538 | 155.8x |
-| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '6000mb').run().as_string.split('\n') | 1.5s | 7266 | 1.0x |
-| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 1.97ms | 7266 | 761.4x |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('google', '6000mb').run().as_string.split('\n') | 900ms | 62834 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('google') | 10.1ms | 62834 | 89.1x |
+| [ripgrepy](https://pypi.org/project/ripgrepy/) | Ripgrepy('text_two', '6000mb').run().as_string.split('\n') | 820ms | 0 | 1.0x |
+| [PySubstringSearch](https://github.com/Intsights/PySubstringSearch) | reader.search('text_two') | 200µs | 0 | 4100x |
 
 
 ### Installation
