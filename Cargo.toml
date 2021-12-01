@@ -1,0 +1,56 @@
+[package]
+name = "pysubstringsearch"
+version = "0.5.0"
+authors = ["Gal Ben David <gal@intsights.com>"]
+edition = "2021"
+description = "A Python library written in Rust that searches for substrings quickly using a Suffix Array"
+readme = "README.md"
+repository = "https://github.com/intsights/pysubstringsearch"
+homepage = "https://github.com/intsights/pysubstringsearch"
+license = "MIT"
+keywords = [
+    "substring",
+    "pattern",
+    "search",
+    "suffix",
+    "array",
+    "rust",
+    "pyo3"
+]
+
+[package.metadata.maturin]
+requires-python = ">=3.6"
+classifier = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Rust",
+]
+
+[lib]
+name = "pysubstringsearch"
+crate-type = ["cdylib"]
+
+[dependencies]
+ahash = "0.7"
+bstr = "0.2"
+byteorder = "1"
+memchr = "2"
+parking_lot = "0.11"
+rayon = "1"
+
+[dependencies.pyo3]
+version = "0.15.1"
+features = ["extension-module"]
+
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"] }
+
+[profile.release]
+lto = true
+panic = "abort"
