@@ -28,6 +28,8 @@ jobs:
           command: publish
           manylinux: 2_24
           args: --username __token__ --no-sdist --interpreter python${{ matrix.python-version }}
+        env:
+          MATURIN_PASSWORD: ${{ secrets.pypi_password }}
       - uses: messense/maturin-action@v1
         if: runner.os == 'Windows'
         with:
@@ -35,3 +37,5 @@ jobs:
           command: publish
           manylinux: 2_24
           args: --username __token__ --no-sdist --interpreter python
+        env:
+          MATURIN_PASSWORD: ${{ secrets.pypi_password }}
