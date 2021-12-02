@@ -22,7 +22,16 @@ jobs:
           toolchain: stable
           override: true
       - uses: messense/maturin-action@v1
+        if: runner.os != 'Windows'
         with:
           maturin-version: latest
           command: publish
+          manylinux: 2_24
           args: --username __token__ --no-sdist --interpreter python${{ matrix.python-version }}
+      - uses: messense/maturin-action@v1
+        if: runner.os == 'Windows'
+        with:
+          maturin-version: latest
+          command: publish
+          manylinux: 2_24
+          args: --username __token__ --no-sdist --interpreter python
