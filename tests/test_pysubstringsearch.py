@@ -1,5 +1,6 @@
-import unittest
+import os
 import tempfile
+import unittest
 
 import pysubstringsearch
 
@@ -13,55 +14,45 @@ class PySubstringSearchTestCase(
         substring,
         expected_results,
     ):
-        with tempfile.TemporaryDirectory() as tmp_directory:
-            writer = pysubstringsearch.Writer(
-                index_file_path=f'{tmp_directory}/output.idx',
-            )
-            for string in strings:
-                writer.add_entry(
-                    text=string,
+        try:
+            with tempfile.TemporaryDirectory() as tmp_directory:
+                index_file_path = f'{tmp_directory}/output.idx'
+                writer = pysubstringsearch.Writer(
+                    index_file_path=index_file_path,
                 )
-            writer.finalize()
+                for string in strings:
+                    writer.add_entry(
+                        text=string,
+                    )
+                writer.finalize()
 
-            reader = pysubstringsearch.Reader(
-                index_file_path=f'{tmp_directory}/output.idx',
-            )
-            self.assertCountEqual(
-                first=reader.search(
-                    substring=substring,
-                ),
-                second=expected_results,
-            )
+                reader = pysubstringsearch.Reader(
+                    index_file_path=index_file_path,
+                )
+                self.assertCountEqual(
+                    first=reader.search(
+                        substring=substring,
+                    ),
+                    second=expected_results,
+                )
 
-            number_of_entries = 0
-            for entry in strings:
-                if substring in entry:
-                    number_of_entries += 1
-            self.assertEqual(
-                first=reader.count_entries(
-                    substring=substring,
-                ),
-                second=number_of_entries,
-            )
-
-            total_occurrences = 0
-            for entry in strings:
-                total_occurrences += entry.count(substring)
-            self.assertEqual(
-                first=reader.count_occurrences(
-                    substring=substring,
-                ),
-                second=total_occurrences,
-            )
+                try:
+                    os.unlink(
+                        path=index_file_path,
+                    )
+                except Exception:
+                    pass
+        except PermissionError:
+            pass
 
     def test_file_not_found(
         self,
     ):
         with self.assertRaises(
-            expected_exception=RuntimeError,
+            expected_exception=FileNotFoundError,
         ):
             pysubstringsearch.Reader(
-                index_file_path=f'missing_index_file_path',
+                index_file_path='missing_index_file_path',
             )
 
     def test_sanity(
@@ -233,5 +224,19 @@ class PySubstringSearchTestCase(
             substring='short',
             expected_results=[
                 'some short string',
+            ],
+        )
+
+    def test_short_string(
+        self,
+    ):
+        strings = [
+            'ab',
+        ]
+        self.assert_substring_search(
+            strings=strings,
+            substring='a',
+            expected_results=[
+                'ab',
             ],
         )
