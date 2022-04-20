@@ -5,7 +5,7 @@ class Writer:
     def __init__(
         self,
         index_file_path: str,
-        max_chunk_len: typing.Optional[int],
+        max_chunk_len: typing.Optional[int] = None,
     ) -> None: ...
 
     def add_entries_from_file_lines(
@@ -36,4 +36,9 @@ class Reader:
     def search(
         self,
         substring: str,
+    ) -> typing.List[str]: ...
+
+    def search_multiple(
+        self,
+        substrings: typing.List[str],
     ) -> typing.List[str]: ...

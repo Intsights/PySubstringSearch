@@ -32,6 +32,7 @@ PySubstringSearch is a library designed to search over an index file for substri
 
 The module implements a method for searching.
 - `search` - Find different entries with the same substring concurrently. Concurrency increases as the index file grows in size with multiple inner chunks.
+- `search_multiple` - same as `search` but accepts multiple substrings in a single call
 
 
 ### Built With
@@ -104,6 +105,15 @@ reader.search('short')
 
 # lookup for a substring
 reader.search('string')
+>>> ['some short string', 'another but now a longer string']
+
+# lookup for multiple substrings
+reader.search_multiple(
+    [
+        'short',
+        'longer',
+    ],
+)
 >>> ['some short string', 'another but now a longer string']
 ```
 

@@ -24,10 +24,9 @@ extern "C" {
 fn construct_suffix_array(
     buffer: &[u8],
 ) -> Vec<i32> {
-    unsafe {
-        let mut suffix_array: Vec<i32> = Vec::with_capacity(buffer.len());
-        suffix_array.set_len(buffer.len());
+    let mut suffix_array = vec![0; buffer.len()];
 
+    unsafe {
         libsais(
             buffer.as_ptr(),
             suffix_array.as_mut_ptr(),
@@ -35,9 +34,9 @@ fn construct_suffix_array(
             0,
             std::ptr::null_mut::<i32>(),
         );
-
-        suffix_array
     }
+
+    suffix_array
 }
 
 #[pyclass]
@@ -174,8 +173,7 @@ impl Reader {
 
         while bytes_read < index_file_len {
             let data_file_len = index_file.read_u32::<LittleEndian>()?;
-            let mut data = Vec::with_capacity(data_file_len as usize);
-            unsafe { data.set_len(data_file_len as usize) };
+            let mut data = vec![0; data_file_len as usize];
             index_file.read_exact(&mut data)?;
 
             let suffixes_file_len = index_file.read_u32::<LittleEndian>()? as usize;
@@ -256,8 +254,7 @@ impl Reader {
                 let start_of_indices = start_of_indices.unwrap();
                 let end_of_indices = end_of_indices.unwrap();
 
-                let mut suffixes = Vec::with_capacity(end_of_indices - start_of_indices + 4);
-                unsafe { suffixes.set_len(end_of_indices - start_of_indices + 4) };
+                let mut suffixes = vec![0; end_of_indices - start_of_indices + 4];
 
                 sub_index.index_file.seek(SeekFrom::Start(start_of_indices as u64)).unwrap();
                 sub_index.index_file.read_exact(&mut suffixes).unwrap();

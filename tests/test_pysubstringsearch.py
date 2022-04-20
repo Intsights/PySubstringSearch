@@ -240,3 +240,55 @@ class PySubstringSearchTestCase(
                 'ab',
             ],
         )
+
+    def test_multiple_strings(
+        self,
+    ):
+        try:
+            with tempfile.TemporaryDirectory() as tmp_directory:
+                index_file_path = f'{tmp_directory}/output.idx'
+                writer = pysubstringsearch.Writer(
+                    index_file_path=index_file_path,
+                )
+                for string in [
+                    'one',
+                    'two',
+                    'three',
+                    'four',
+                    'five',
+                    'six',
+                    'seven',
+                    'eight',
+                    'nine',
+                    'ten',
+                    'tenten',
+                ]:
+                    writer.add_entry(
+                        text=string,
+                    )
+                writer.finalize()
+
+                reader = pysubstringsearch.Reader(
+                    index_file_path=index_file_path,
+                )
+                self.assertCountEqual(
+                    first=reader.search_multiple(
+                        substrings=[
+                            'ee',
+                            'ven',
+                        ],
+                    ),
+                    second=[
+                        'three',
+                        'seven',
+                    ],
+                )
+
+                try:
+                    os.unlink(
+                        path=index_file_path,
+                    )
+                except Exception:
+                    pass
+        except PermissionError:
+            pass

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=0.11,<0.12"]
+requires = ["maturin>=0.12,<0.13"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -12,7 +12,7 @@ sdist-include = [
 
 [tool.poetry]
 name = "pysubstringsearch"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Gal Ben David <gal@intsights.com>"]
 description = "A Python library written in Rust that searches for substrings quickly using a Suffix Array"
 readme = "README.md"
@@ -41,7 +41,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
