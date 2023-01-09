@@ -1,6 +1,6 @@
 [package]
 name = "pysubstringsearch"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Gal Ben David <gal@intsights.com>"]
 edition = "2021"
 description = "A Python library written in Rust that searches for substrings quickly using a Suffix Array"
@@ -29,6 +29,7 @@ classifier = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Rust",
 ]
 
