@@ -1,0 +1,16 @@
+---
+info:
+  title: Pysubstringsearch
+  description: Python library for fast substring/pattern search written in C++ leveraging
+    Suffix Array Algorithm
+  x-cortex-git:
+    github:
+      alias: intsightsorg
+      repository: Intsights/PySubstringSearch
+  x-cortex-tag: pysubstringsearch
+  x-cortex-type: service
+  x-cortex-domain-parents:
+  - tag: threatintel-rd
+openapi: 3.0.1
+servers:
+- url: "/"
