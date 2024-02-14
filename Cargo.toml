@@ -1,6 +1,6 @@
 [package]
 name = "pysubstringsearch"
-version = "0.7.0"
+version = "0.7.1"
 authors = ["Gal Ben David <gal@intsights.com>"]
 edition = "2021"
 description = "A Python library written in Rust that searches for substrings quickly using a Suffix Array"
@@ -19,19 +19,6 @@ keywords = [
 ]
 
 [package.metadata.maturin]
-requires-python = ">=3.7"
-classifier = [
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: MacOS",
-    "Operating System :: Microsoft",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Rust",
-]
 
 [lib]
 name = "pysubstringsearch"

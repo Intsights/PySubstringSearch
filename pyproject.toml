@@ -12,7 +12,7 @@ sdist-include = [
 
 [tool.poetry]
 name = "pysubstringsearch"
-version = "0.7.0"
+version = "0.7.1"
 authors = ["Gal Ben David <gal@intsights.com>"]
 description = "A Python library written in Rust that searches for substrings quickly using a Suffix Array"
 readme = "README.md"
