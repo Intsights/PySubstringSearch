@@ -12,7 +12,7 @@ info:
   x-cortex-domain-parents:
   - tag: threatintel-platform-delivery
   x-cortex-groups:
-  - exposure:external-ship
+  - exposure:opensource
   - target:library
 openapi: 3.0.1
 servers:
