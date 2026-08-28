@@ -25,7 +25,7 @@ name = "pysubstringsearch"
 crate-type = ["cdylib"]
 
 [dependencies]
-ahash = "0.7"
+ahash = "0.8"
 bstr = "0.2"
 byteorder = "1"
 memchr = "2"
