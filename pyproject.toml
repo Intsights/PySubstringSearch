@@ -41,7 +41,6 @@ python = "^3.7"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
-gitpython = "*"
 wheel = "*"
 pytest-runner = "*"
 maturin = "*"
