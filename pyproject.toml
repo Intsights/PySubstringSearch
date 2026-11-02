@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=0.12,<0.13"]
+requires = ["maturin>=0.15,<0.16"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -31,12 +31,7 @@ keywords = [
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: MacOS",
-    "Operating System :: Microsoft",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Rust",
 ]
@@ -44,7 +39,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = "^3.7"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "*"
 gitpython = "*"
 wheel = "*"
